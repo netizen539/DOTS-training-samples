@@ -7,6 +7,6 @@ public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvert
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
         var data = new ThrowingArmsSharedDataComponent{};
-        dstManager.SetSharedComponentData(entity, data);
+        dstManager.AddSharedComponentData(entity, data);
     }
 }
