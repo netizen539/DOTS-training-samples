@@ -38,6 +38,10 @@ public class SpawnAllEntitiesSystem : ComponentSystem
                 {
                     Value = spawnPositions[index] * 10f
                 });
+                PostUpdateCommands.AddComponent(entities[index], new Scale
+                {
+                    Value = 0f
+                });
                 PostUpdateCommands.AddComponent(entities[index], new RockComponent());
                 PostUpdateCommands.AddComponent(entities[index], new InitComponentTag()); //TODO Need to fill in data
                 PostUpdateCommands.AddComponent(entities[index], new SizeableComponent()); //TODO Need to fill in data
@@ -47,6 +51,10 @@ public class SpawnAllEntitiesSystem : ComponentSystem
                 PostUpdateCommands.SetComponent(entities[index], new Translation
                 {
                     Value = spawnPositions[index] * 5f
+                });
+                PostUpdateCommands.AddComponent(entities[index], new Scale
+                {
+                    Value = 0f
                 });
                 PostUpdateCommands.AddComponent(entities[index], new TinCanComponent());
                 PostUpdateCommands.AddComponent(entities[index], new InitComponentTag()); //TODO Need to fill in data
