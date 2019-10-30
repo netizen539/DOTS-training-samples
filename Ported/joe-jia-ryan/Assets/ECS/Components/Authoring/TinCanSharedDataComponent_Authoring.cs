@@ -22,7 +22,7 @@ public class TinCanSharedDataComponent_Authoring : MonoBehaviour, IConvertGameOb
             Gravity = this.Gravity
         };
 
-        dstManager.AddSharedComponentData(entity, data);
+        dstManager.AddComponentData(entity, data);
     }
 
 }
