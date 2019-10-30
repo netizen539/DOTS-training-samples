@@ -8,14 +8,15 @@ using static Unity.Mathematics.math;
 
 public class ConveyorSystems : JobComponentSystem
 {
-    BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
+    BeginSimulationEntityCommandBufferSystem m_EntityCommandBufferSystem;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+        m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
     }
 
+    [BurstCompile]
     struct ConveyorJob : IJobForEachWithEntity<Translation, RigidBodyComponent, ConveyorComponent>
     {
         public EntityCommandBuffer.Concurrent CommandBuffer;
@@ -29,7 +30,7 @@ public class ConveyorSystems : JobComponentSystem
             if (translation.Value.x * conveyor.Direction.x > conveyor.MaxX + 5f)
             {
                 CommandBuffer.RemoveComponent<ConveyorComponent>(index, e);
-                CommandBuffer.AddComponent(index, e, new InitComponentTag());
+                CommandBuffer.AddComponent(index, e, new ResetTag());
             }
         }
     }
