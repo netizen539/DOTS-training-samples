@@ -494,6 +494,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa7a0632cf1bb304e9b7c4092dbacf03, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ArmCount: 100
+  ArmWidth: 1
+  ConveyorMargin: 10
+  ConveyorWidth: 0
+  ConveyorMaxX: 0
+  ConveyorMinX: 0
+  ConveyorSpeed: 5
 --- !u!114 &2145271485
 MonoBehaviour:
   m_ObjectHideFlags: 0
