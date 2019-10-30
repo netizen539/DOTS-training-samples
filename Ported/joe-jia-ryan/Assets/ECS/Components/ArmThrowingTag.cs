@@ -4,7 +4,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 [Serializable]
-public struct ArmThrowingTah : IComponentData
+public struct ArmThrowingTag : IComponentData
 {
     // Add fields to your component here. Remember that:
     //

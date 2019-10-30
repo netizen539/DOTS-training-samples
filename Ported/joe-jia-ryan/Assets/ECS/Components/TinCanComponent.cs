@@ -21,5 +21,9 @@ public struct TinCanComponent : IComponentData
     //   for runtime use here. Authoring Components will be used for 
     //   authoring the data in the Editor.
 
+    public Vector2 RangeY;
+    public float Gravity;
+    public Vector3 Velocity;
+    public Vector3 AngularVelocity;
     
 }
