@@ -20,5 +20,5 @@ public struct RockHeldComponent : IComponentData
     //   for runtime use here. Authoring Components will be used for 
     //   authoring the data in the Editor.
     
-    
+    public float3 Velocity;
 }
