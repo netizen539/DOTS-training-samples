@@ -4,6 +4,7 @@ using UnityEngine;
 
 using Unity.Entities;
 
+[RequiresEntityConversion]
 public class RockSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity
 {
     public GameObject Prefab;

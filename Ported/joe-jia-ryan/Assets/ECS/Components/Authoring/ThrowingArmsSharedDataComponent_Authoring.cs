@@ -2,6 +2,7 @@ using UnityEngine;
 
 using Unity.Entities;
 
+[RequiresEntityConversion]
 public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity
 {
     public float ArmCount;
