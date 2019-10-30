@@ -18,13 +18,14 @@ public class TinCanResetSystem : JobComponentSystem
         m_ArmDataQuery = GetEntityQuery(typeof(ThrowingArmsSharedDataComponent));
     }
 
-    struct TinCanInitJob : IJobForEachWithEntity<Translation, Rotation, Scale, TinCanComponent, RigidBodyComponent, InitComponentTag>
+    [BurstCompile]
+    struct TinCanInitJob : IJobForEachWithEntity<Translation, Rotation, Scale, TinCanComponent, RigidBodyComponent, ResetTag>
     {
         public EntityCommandBuffer.Concurrent CommandBuffer;
         public Unity.Mathematics.Random Rand;
         public float TotalArmsWidth;
 
-        public void Execute(Entity e, int index, ref Translation translation, ref Rotation rotation, ref Scale scale, [ReadOnly] ref TinCanComponent tinCan, ref RigidBodyComponent rigidBody, [ReadOnly] ref InitComponentTag initTag)
+        public void Execute(Entity e, int index, ref Translation translation, ref Rotation rotation, ref Scale scale, [ReadOnly] ref TinCanComponent tinCan, ref RigidBodyComponent rigidBody, [ReadOnly] ref ResetTag resetTag)
         {
             var position = new float3(Rand.NextFloat(0f, TotalArmsWidth + 10f),
                                       Rand.NextFloat(tinCan.RangeY.x, tinCan.RangeY.y),
@@ -35,7 +36,7 @@ public class TinCanResetSystem : JobComponentSystem
             rigidBody.Velocity = rigidBody.AngularVelocity = float3.zero;
 
             CommandBuffer.RemoveComponent<ReservedTag>(index, e);
-            CommandBuffer.RemoveComponent<InitComponentTag>(index, e);
+            CommandBuffer.RemoveComponent<ResetTag>(index, e);
 
             CommandBuffer.AddComponent(index, e, new ConveyorComponent { Direction = Vector3.left,
                                                                          MaxX = 0f,
@@ -65,6 +66,7 @@ public class TinCanResetSystem : JobComponentSystem
 
 public class TinCanSizeableSystem : JobComponentSystem
 {
+    [BurstCompile]
     struct TinCanSizeableJob : IJobForEach<Scale, TinCanComponent, SizeableComponent>
     {
         public float DeltaTime;

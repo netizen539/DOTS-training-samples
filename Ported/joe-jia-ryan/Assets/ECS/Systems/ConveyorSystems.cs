@@ -16,6 +16,7 @@ public class ConveyorSystems : JobComponentSystem
         m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
     }
 
+    [BurstCompile]
     struct ConveyorJob : IJobForEachWithEntity<Translation, RigidBodyComponent, ConveyorComponent>
     {
         public EntityCommandBuffer.Concurrent CommandBuffer;
@@ -29,7 +30,7 @@ public class ConveyorSystems : JobComponentSystem
             if (translation.Value.x * conveyor.Direction.x > conveyor.MaxX + 5f)
             {
                 CommandBuffer.RemoveComponent<ConveyorComponent>(index, e);
-                CommandBuffer.AddComponent(index, e, new InitComponentTag());
+                CommandBuffer.AddComponent(index, e, new ResetTag());
             }
         }
     }
