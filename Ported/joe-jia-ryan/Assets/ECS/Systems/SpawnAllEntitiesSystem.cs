@@ -61,9 +61,9 @@ public class SpawnAllEntitiesSystem : ComponentSystem
                 PostUpdateCommands.AddComponent(entities[index], new RigidBodyComponent { Gravity = 20f, //spawnComponent.Gravity,
                                                                                           Velocity = float3.zero,
                                                                                           AngularVelocity = float3.zero
-                });
-                PostUpdateCommands.AddComponent(entities[index], new InitComponentTag()); //TODO Need to fill in data
-                //PostUpdateCommands.AddComponent(entities[index], new SizeableComponent()); //TODO Need to fill in data
+                });                
+                PostUpdateCommands.AddComponent(entities[index], new SizeableComponent { ScaleFactor = 5f, TargetSize = 1f }); //TODO Need to fill in data
+                PostUpdateCommands.AddComponent(entities[index], new ResetTag());
                 index++;
             }
 

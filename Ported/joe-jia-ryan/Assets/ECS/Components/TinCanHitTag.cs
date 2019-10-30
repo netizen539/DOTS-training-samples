@@ -4,7 +4,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 [Serializable]
-public struct TinCanHitComponent : IComponentData
+public struct TinCanHitTag : IComponentData
 {
     // Add fields to your component here. Remember that:
     //
