@@ -10,15 +10,11 @@ public class RockHeldSystem : JobComponentSystem
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         var ecb = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>().CreateCommandBuffer().ToConcurrent();
-        Unity.Mathematics.Random rnd = new Unity.Mathematics.Random();
-        rnd.InitState();
-        
         float deltaTime = Time.deltaTime;
-
         var jobHandle = inputDeps;
 
         jobHandle = Entities
-        .WithName("MoveHeldRock")
+        .WithName("RockHeldSystem")
         .WithAll<RockComponent>()
         .ForEach(
             (int entityInQueryIndex, Entity e, ref RockHeldComponent rhc, ref Translation pos) => 

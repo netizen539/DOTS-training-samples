@@ -1,7 +1,6 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 using Unity.Jobs;
 using Unity.Collections;
 
@@ -18,13 +17,16 @@ public class InitRocksSystem : JobComponentSystem
     {
         var throwingArmsComponentArray = m_InitDataQuery.ToComponentDataArray<ThrowingArmsSharedDataComponent>(Allocator.TempJob);
         var rockComponentArray = m_InitDataQuery.ToComponentDataArray<RockSharedDataComponent>(Allocator.TempJob);
-        var ecb = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>().CreateCommandBuffer().ToConcurrent();
+        var ecbs = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+        var ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         Unity.Mathematics.Random rnd = new Unity.Mathematics.Random();
         rnd.InitState();
 
         var jobHandle = Entities
-        .WithName("Init_Rocks")
+        .WithName("InitRocks")
         .WithAll<RockComponent, InitComponentTag>()
+        .WithDeallocateOnJobCompletion(throwingArmsComponentArray)
+        .WithDeallocateOnJobCompletion(rockComponentArray)
         .ForEach(
             (int entityInQueryIndex, Entity e, ref Translation pos) => 
             {
@@ -48,18 +50,24 @@ public class InitRocksSystem : JobComponentSystem
                     ScaleFactor = rc.SizeGrowthFactor,
                 });                
 
-                var minConveyorX = tac.ConveyorMinX + tac.ConveyorMargin * 2f;
-                float spacing = minConveyorX / tac.ArmCount;
-                float3 basePos = new float3(-minConveyorX,0f,1.5f);
+                var minConveyorX = -tac.ConveyorMargin;
+                float spacing = (tac.ConveyorWidth + 2f * tac.ConveyorMargin) / (float)tac.ArmCount;
+                float3 basePos = new float3(minConveyorX,0f,1.5f);
 
                 pos.Value = basePos + right * spacing * entityInQueryIndex;
+
+                ecb.AddComponent(entityInQueryIndex, e, new RigidBodyComponent
+                {
+                    Gravity = rc.Gravity,
+                    Velocity = new float3(0f,0f,0f),
+                    AngularVelocity = new float3(0f,0f,0f),
+                });                
+
 
             })
             .Schedule(inputDeps);
 
-        jobHandle.Complete();
-        rockComponentArray.Dispose();
-        throwingArmsComponentArray.Dispose();
+        ecbs.AddJobHandleForProducer(jobHandle);
         return jobHandle;
     }
 }

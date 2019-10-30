@@ -9,7 +9,8 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
 {
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
-        var ecb = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>().CreateCommandBuffer().ToConcurrent();
+        var ecbs = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+        var ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         Unity.Mathematics.Random rnd = new Unity.Mathematics.Random();
         rnd.InitState();
         
@@ -41,27 +42,43 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
                 if (val > 0.9f)
                 {
                     ecb.RemoveComponent<RockHeldComponent>(entityInQueryIndex, e);
-                    ecb.AddComponent(entityInQueryIndex, e, new RockThrownComponent());
+                    ecb.AddComponent(entityInQueryIndex, e, new RockThrownComponent{ Velocity = new float3(0f, 2f, 2f)});
                 }
             })
             .Schedule(jobHandle);
 
+        // jobHandle = Entities
+        // .WithName("MoveThrownToInFlight")
+        // .WithAll<RockComponent>()
+        // .ForEach(
+        //     (int entityInQueryIndex, Entity e, ref RockThrownComponent rtc, ref RigidBodyComponent rbc) => 
+        //     {
+        //         float val = rnd.NextFloat(0f, 1f);
+        //         if (val > 0.5f)
+        //         {
+        //             ecb.RemoveComponent<RockThrownComponent>(entityInQueryIndex, e);
+        //             rbc.Velocity = rtc.Velocity;
+        //             ecb.AddComponent(entityInQueryIndex, e, new InFlightTag());
+        //         }
+        //     })
+        //     .Schedule(jobHandle);
+
         jobHandle = Entities
-        .WithName("MoveThrownToReset")
-        .WithAll<RockComponent, RockThrownComponent>()
+        .WithName("MoveInFlightToReset")
+        .WithAll<RockComponent, InFlightTag>()
         .ForEach(
             (int entityInQueryIndex, Entity e) => 
             {
                 float val = rnd.NextFloat(0f, 1f);
                 if (val > 0.5f)
                 {
-                    ecb.RemoveComponent<RockThrownComponent>(entityInQueryIndex, e);
+                    ecb.RemoveComponent<InFlightTag>(entityInQueryIndex, e);
                     ecb.AddComponent(entityInQueryIndex, e, new ResetTag());
                 }
             })
             .Schedule(jobHandle);
 
-        jobHandle.Complete();
+        ecbs.AddJobHandleForProducer(jobHandle);
         return jobHandle;
     }
 }
