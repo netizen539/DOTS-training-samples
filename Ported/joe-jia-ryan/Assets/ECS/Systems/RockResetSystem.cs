@@ -1,11 +1,13 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 using Unity.Jobs;
 using Unity.Collections;
 
-public class InitRocksSystem : JobComponentSystem
+public class ResetSystem : JobComponentSystem
 {
+    uint frameCount = 0;
     EntityQuery m_InitDataQuery;
 
     protected override void OnCreate()
@@ -15,41 +17,35 @@ public class InitRocksSystem : JobComponentSystem
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
+        frameCount++;
+
         var throwingArmsComponentArray = m_InitDataQuery.ToComponentDataArray<ThrowingArmsSharedDataComponent>(Allocator.TempJob);
         var rockComponentArray = m_InitDataQuery.ToComponentDataArray<RockSharedDataComponent>(Allocator.TempJob);
         var ecbs = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
         var ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         Unity.Mathematics.Random rnd = new Unity.Mathematics.Random();
-        rnd.InitState();
+        rnd.InitState(frameCount);
         var right = new float3(1.0f, 0f, 0f);
 
         var jobHandle = Entities
-        .WithName("InitRocks")
-        .WithAll<RockComponent, InitComponentTag>()
+        .WithName("RockThrowSystem")
+        .WithAll<RockComponent, ResetTag>()
         .WithDeallocateOnJobCompletion(throwingArmsComponentArray)
         .WithDeallocateOnJobCompletion(rockComponentArray)
         .ForEach(
-            (int entityInQueryIndex, Entity e, ref Translation pos) => 
+            (int entityInQueryIndex, Entity e, ref Scale scale, ref Translation pos, ref SizeableComponent sc) => 
             {
 
                 var tac = throwingArmsComponentArray[0];
                 var rc = rockComponentArray[0];
 
-                ecb.RemoveComponent<InitComponentTag>(entityInQueryIndex, e);
-                ecb.SetComponent(entityInQueryIndex, e, new SizeableComponent
-                {
-                    TargetSize = rnd.NextFloat(rc.MinRockSize, rc.MaxRockSize),
-                    CurrentSize = 0f,
-                    ScaleFactor = rc.SizeGrowthFactor,
-                });                
-
+                sc.CurrentSize = 0;
+                scale.Value = 0;
                 var minConveyorX = -tac.ConveyorMargin;
                 var maxConveyorX = tac.ConveyorWidth + tac.ConveyorMargin;
+                pos.Value = new float3(rnd.NextFloat(minConveyorX, maxConveyorX),0f,1.5f);
 
-                float spacing = (maxConveyorX - minConveyorX) / (float)tac.ArmCount;
-                float3 basePos = new float3(minConveyorX,0f,1.5f);
-
-                pos.Value = basePos + right * spacing * entityInQueryIndex;
+                ecb.RemoveComponent<ResetTag>(entityInQueryIndex, e);
                 ecb.AddComponent(entityInQueryIndex, e, new ConveyorComponent
                 {
                     Speed = tac.ConveyorSpeed,
@@ -57,19 +53,10 @@ public class InitRocksSystem : JobComponentSystem
                     ResetX = minConveyorX,
                     MaxX = maxConveyorX
                 });
-
-                ecb.AddComponent(entityInQueryIndex, e, new RigidBodyComponent
-                {
-                    Gravity = rc.Gravity,
-                    Velocity = new float3(0f,0f,0f),
-                    AngularVelocity = new float3(0f,0f,0f),
-                });                
-
-
             })
             .Schedule(inputDeps);
-
+        
         ecbs.AddJobHandleForProducer(jobHandle);
         return jobHandle;
-    }
+   }
 }
