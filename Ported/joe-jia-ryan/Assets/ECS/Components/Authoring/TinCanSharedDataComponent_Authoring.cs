@@ -5,7 +5,7 @@ using UnityEngine;
 using Unity.Entities;
 
 [RequiresEntityConversion]
-public class TinCanSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity
+public class TinCanSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity, IDeclareReferencedPrefabs
 {
     public GameObject Prefab;
     public float MinHeightFromGround;
