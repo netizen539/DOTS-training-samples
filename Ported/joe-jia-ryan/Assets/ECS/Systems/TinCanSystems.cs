@@ -7,14 +7,6 @@ using Unity.Transforms;
 using static Unity.Mathematics.math;
 using UnityEngine;
 
-public struct TinCanSpawnComponent : IComponentData
-{
-    public Entity TinCanPrefab;
-    public Vector3 Size;
-    public float Gravity;
-    public int TotalCount;
-}
-
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public class TinCanSpawnSystem : JobComponentSystem
 {

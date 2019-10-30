@@ -3,6 +3,14 @@ using System.Collections.Generic;
 using Unity.Entities;
 using UnityEngine;
 
+public struct TinCanSpawnComponent : IComponentData
+{
+    public Entity TinCanPrefab;
+    public Vector3 Size;
+    public float Gravity;
+    public int TotalCount;
+}
+
 [DisallowMultipleComponent]
 [RequiresEntityConversion]
 public class TinCanSpawnAuthoringComponent : MonoBehaviour, IConvertGameObjectToEntity, IDeclareReferencedPrefabs
