@@ -21,7 +21,7 @@ public struct SizeableComponent : IComponentData
     //   for runtime use here. Authoring Components will be used for 
     //   authoring the data in the Editor.
 
-    public Vector3 TargetSize;
-    public Vector3 CurrentSize;
+    public float TargetSize;
+    public float CurrentSize;
     public float ScaleFactor;
 }

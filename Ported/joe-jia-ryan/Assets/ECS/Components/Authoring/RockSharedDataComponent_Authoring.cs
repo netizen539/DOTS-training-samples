@@ -22,7 +22,7 @@ public class RockSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObje
             Gravity = this.Gravity
         };
 
-        dstManager.AddSharedComponentData(entity, data);
+        dstManager.AddComponentData(entity, data);
     }
 
 }

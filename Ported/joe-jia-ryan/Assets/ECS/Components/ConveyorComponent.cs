@@ -5,7 +5,7 @@ using Unity.Mathematics;
 using UnityEngine;
 
 [Serializable]
-public struct ConvoyorComponent : IComponentData
+public struct ConveyorComponent : IComponentData
 {
     // Add fields to your component here. Remember that:
     //

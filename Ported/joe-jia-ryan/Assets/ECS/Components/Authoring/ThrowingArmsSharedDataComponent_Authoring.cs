@@ -34,7 +34,7 @@ public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvert
             ConveyorSpeed = this.ConveyorSpeed,
         };
 
-        dstManager.AddSharedComponentData(entity, data);
+        dstManager.AddComponentData(entity, data);
     }
     
     // Referenced prefabs have to be declared so that the conversion system knows about them ahead of time
