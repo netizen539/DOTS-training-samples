@@ -43,22 +43,27 @@ public class SpawnAllEntitiesSystem : ComponentSystem
                     Value = 0f
                 });
                 PostUpdateCommands.AddComponent(entities[index], new RockComponent());
+                PostUpdateCommands.AddComponent(entities[index], new RigidBodyComponent());
                 PostUpdateCommands.AddComponent(entities[index], new InitComponentTag()); //TODO Need to fill in data
                 PostUpdateCommands.AddComponent(entities[index], new SizeableComponent()); //TODO Need to fill in data
                 index++;
 
+                // Spawn Tin Cans
                 entities[index] = PostUpdateCommands.Instantiate(sac.TinCanPrefab);
                 PostUpdateCommands.SetComponent(entities[index], new Translation
                 {
                     Value = spawnPositions[index] * 5f
                 });
-                PostUpdateCommands.AddComponent(entities[index], new Scale
-                {
-                    Value = 0f
+                PostUpdateCommands.AddComponent(entities[index], new Scale { Value = 1f });
+                PostUpdateCommands.AddComponent(entities[index], new TinCanComponent { RangeY = new float2(3f, 8f),
+                                                                                       ReserveTime = 3
                 });
-                PostUpdateCommands.AddComponent(entities[index], new TinCanComponent());
+                PostUpdateCommands.AddComponent(entities[index], new RigidBodyComponent { Gravity = 20f, //spawnComponent.Gravity,
+                                                                                          Velocity = float3.zero,
+                                                                                          AngularVelocity = float3.zero
+                });
                 PostUpdateCommands.AddComponent(entities[index], new InitComponentTag()); //TODO Need to fill in data
-                PostUpdateCommands.AddComponent(entities[index], new SizeableComponent()); //TODO Need to fill in data
+                //PostUpdateCommands.AddComponent(entities[index], new SizeableComponent()); //TODO Need to fill in data
                 index++;
             }
 

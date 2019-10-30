@@ -22,8 +22,6 @@ public struct TinCanComponent : IComponentData
     //   authoring the data in the Editor.
 
     public Vector2 RangeY;
-    public float Gravity;
-    public Vector3 Velocity;
-    public Vector3 AngularVelocity;
+	public int ReserveTime;
     
 }

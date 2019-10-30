@@ -6,7 +6,7 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-[UpdateInGroup(typeof(SimulationSystemGroup))]
+/*[UpdateInGroup(typeof(SimulationSystemGroup))]
 public class TinCanSpawnSystem : JobComponentSystem
 {
     BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
@@ -49,44 +49,58 @@ public class TinCanSpawnSystem : JobComponentSystem
 
         return job;
     }
-}
+}*/
 
-public class TinCanResetSystem : JobComponentSystem
+public class InitTinCanSystem : JobComponentSystem
 {
     BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
+    EntityQuery m_ArmDataQuery;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+        m_ArmDataQuery = GetEntityQuery(typeof(ThrowingArmsSharedDataComponent));
     }
 
-    struct TinCanResetJob : IJobForEachWithEntity<Translation, Rotation, TinCanComponent, ResetTag>
+    struct InitTinCanJob : IJobForEachWithEntity<Translation, Rotation, Scale, TinCanComponent, RigidBodyComponent, InitComponentTag>
     {
         public EntityCommandBuffer.Concurrent CommandBuffer;
         public Unity.Mathematics.Random Rand;
+        public float TotalArmsWidth;
 
-        public void Execute(Entity e, int index, ref Translation translation, ref Rotation rotation, [ReadOnly] ref TinCanComponent tinCan, [ReadOnly] ref ResetTag resetTag)
-        {            
-            var position = new float3(Rand.NextFloat(0f, 100f),     ////// !TODO //////
+        public void Execute(Entity e, int index, ref Translation translation, ref Rotation rotation, ref Scale scale, [ReadOnly] ref TinCanComponent tinCan, ref RigidBodyComponent rigidBody, [ReadOnly] ref InitComponentTag initTag)
+        {
+            var position = new float3(Rand.NextFloat(0f, TotalArmsWidth + 10f),
                                       Rand.NextFloat(tinCan.RangeY.x, tinCan.RangeY.y),
                                       15f);
             translation.Value = position;
             rotation.Value = quaternion.identity;
-            CommandBuffer.RemoveComponent<ResetTag>(index, e);
-            CommandBuffer.AddComponent(index, e, new ConvoyorComponent { });
+            scale.Value = 1f;
+            rigidBody.Velocity = rigidBody.AngularVelocity = float3.zero;
+            CommandBuffer.RemoveComponent<InitComponentTag>(index, e);
+            //CommandBuffer.AddComponent(index, e, new SizeableComponent());
+            CommandBuffer.AddComponent(index, e, new ConveyorComponent { Direction = Vector3.left,
+                                                                         MaxX = 0f,
+                                                                         ResetX = 100f,
+                                                                         Speed = 3f
+            });
+            CommandBuffer.RemoveComponent<ReservedTag>(index, e);
         }
     }
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
-        var job = new TinCanResetJob
-        {
+        var throwingArmsComponentArray = m_ArmDataQuery.ToComponentDataArray<ThrowingArmsSharedDataComponent>(Allocator.TempJob);
+
+        var job = new InitTinCanJob {
             CommandBuffer = m_EntityCommandBufferSystem.CreateCommandBuffer().ToConcurrent(),
-            Rand = new Unity.Mathematics.Random(839204)
+            Rand = new Unity.Mathematics.Random( (uint)(System.DateTime.Now.Millisecond+1)),
+            TotalArmsWidth = throwingArmsComponentArray[0].ConveyorWidth
         }.Schedule(this, inputDeps);
 
         m_EntityCommandBufferSystem.AddJobHandleForProducer(job);
+        throwingArmsComponentArray.Dispose();
 
         return job;
     }

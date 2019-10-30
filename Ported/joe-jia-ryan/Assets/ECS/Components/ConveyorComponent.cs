@@ -2,7 +2,6 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using UnityEngine;
 
 [Serializable]
 public struct ConveyorComponent : IComponentData
@@ -22,7 +21,7 @@ public struct ConveyorComponent : IComponentData
     //   authoring the data in the Editor.
 
     public float Speed;
-    public Vector3 Direction;
+    public float3 Direction;
     public float ResetX;
     public float MaxX;  
 }
