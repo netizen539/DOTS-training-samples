@@ -16,7 +16,7 @@ public class SpawnAllEntitiesSystem : ComponentSystem
 
     protected override void OnUpdate()
     {
-        Entities.ForEach((Entity e, ref SpawnAllComponent sac, ref LocalToWorld localToWorld) =>                
+        Entities.ForEach((Entity e, ref SpawnAllComponent sac) =>                
         {
             int toSpawnCount = sac.Count;
 
@@ -35,12 +35,9 @@ public class SpawnAllEntitiesSystem : ComponentSystem
 
             for (int i = 0; i < toSpawnCount; i++)
             {
-                PostUpdateCommands.SetComponent(entities[i], new LocalToWorld
+                PostUpdateCommands.SetComponent(entities[i], new Translation
                 {
-                    Value = float4x4.TRS(
-                        localToWorld.Position + (spawnPositions[i] * 10f),
-                        quaternion.LookRotationSafe(spawnPositions[i], math.up()),
-                        new float3(1.0f, 1.0f, 1.0f))
+                    Value = spawnPositions[i] * 10f
                 });
             }
 
