@@ -7,6 +7,7 @@ using Unity.Entities;
 [RequiresEntityConversion]
 public class RockSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity, IDeclareReferencedPrefabs
 {
+    public ThrowingArmsSharedDataComponent_Authoring throwingArmsSharedDataComponent;
     public GameObject Prefab;
     public float MinRockSize;
     public float MaxRockSize;
@@ -15,9 +16,12 @@ public class RockSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObje
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
+        var count = throwingArmsSharedDataComponent.ArmCount;
+        var spawn = new SpawnAllComponent{ Prefab = conversionSystem.GetPrimaryEntity(Prefab), Count = count};
+        dstManager.AddComponentData(entity, spawn);
+
         var data = new RockSharedDataComponent
         {
-            Prefab = conversionSystem.GetPrimaryEntity(Prefab),
             MinRockSize = this.MinRockSize,
             MaxRockSize = this.MaxRockSize,
             SizeGrowthFactor = this.SizeGrowthFactor,

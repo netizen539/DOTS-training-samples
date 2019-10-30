@@ -1,9 +1,9 @@
 using Unity.Entities;
 
 [System.Serializable]
-public struct ThrowingArmsSharedDataComponent : ISharedComponentData
+public struct ThrowingArmsSharedDataComponent : IComponentData
 {
-    public float ArmCount;
+    public int ArmCount;
     public float ArmWidth;
     public float ConveyorMargin;
     public float ConveyorWidth;

@@ -340,6 +340,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ed9cb7b665566844901e0e2ade72777, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  throwingArmsSharedDataComponent: {fileID: 2145271484}
   Prefab: {fileID: 7729135922115410062, guid: e43a51888ff18974d95d9321eb2cb410, type: 3}
   MinRockSize: 0.3
   MaxRockSize: 0.45
@@ -402,6 +403,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15fb11e1e3d6c9f4b899a50c57ae27f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  throwingArmsSharedDataComponent: {fileID: 2145271484}
   Prefab: {fileID: 1062600091147575846, guid: 375668c8eb9a44c45930795beef1b71a, type: 3}
   MinHeightFromGround: 3
   MaxHeightFromGround: 8
@@ -497,9 +499,6 @@ MonoBehaviour:
   ArmCount: 100
   ArmWidth: 1
   ConveyorMargin: 10
-  ConveyorWidth: 0
-  ConveyorMaxX: 0
-  ConveyorMinX: 0
   ConveyorSpeed: 5
 --- !u!114 &2145271485
 MonoBehaviour:

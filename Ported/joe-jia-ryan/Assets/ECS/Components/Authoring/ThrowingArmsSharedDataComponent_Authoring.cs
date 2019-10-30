@@ -5,7 +5,7 @@ using Unity.Entities;
 [RequiresEntityConversion]
 public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity
 {
-    public float ArmCount;
+    public int ArmCount;
     public float ArmWidth;
     public float ConveyorMargin;
     public float ConveyorSpeed;
@@ -22,6 +22,7 @@ public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvert
             ConveyorMinX = conveyorWidth + this.ConveyorMargin,
             ConveyorSpeed = this.ConveyorSpeed,
         };
-        dstManager.AddSharedComponentData(entity, data);
+        dstManager.AddComponentData(entity, new SpawnAllComponent());
+        dstManager.AddComponentData(entity, data);
     }
 }
