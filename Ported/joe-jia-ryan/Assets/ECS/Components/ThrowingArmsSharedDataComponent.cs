@@ -1,7 +1,7 @@
 using Unity.Entities;
 
 [System.Serializable]
-public struct ThrowingArmsSharedDataComponent : IComponentData
+public struct ThrowingArmsSharedDataComponent : ISharedComponentData
 {
     public int ArmCount;
     public float ArmWidth;

@@ -5,10 +5,8 @@ using UnityEngine;
 using Unity.Entities;
 
 [RequiresEntityConversion]
-public class TinCanSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity, IDeclareReferencedPrefabs
+public class TinCanSharedDataComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity
 {
-    public ThrowingArmsSharedDataComponent_Authoring throwingArmsSharedDataComponent;
-    public GameObject Prefab;
     public float MinHeightFromGround;
     public float MaxHeightFromGround;
     public float SizeGrowthFactor;
@@ -16,10 +14,6 @@ public class TinCanSharedDataComponent_Authoring : MonoBehaviour, IConvertGameOb
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
-        var count = throwingArmsSharedDataComponent.ArmCount;
-        var spawn = new SpawnAllComponent{ Prefab = conversionSystem.GetPrimaryEntity(Prefab), Count = count};
-        dstManager.AddComponentData(entity, spawn);
-
         var data = new TinCanSharedDataComponent
         {
             MinHeightFromGround = this.MinHeightFromGround,
@@ -31,9 +25,4 @@ public class TinCanSharedDataComponent_Authoring : MonoBehaviour, IConvertGameOb
         dstManager.AddSharedComponentData(entity, data);
     }
 
-    // Referenced prefabs have to be declared so that the conversion system knows about them ahead of time
-    public void DeclareReferencedPrefabs(List<GameObject> referencedPrefabs)
-    {
-        referencedPrefabs.Add(Prefab);
-    }
 }

@@ -18,30 +18,42 @@ public class SpawnAllEntitiesSystem : ComponentSystem
     {
         Entities.ForEach((Entity e, ref SpawnAllComponent sac) =>                
         {
-            int toSpawnCount = sac.Count;
+            int totalCount = sac.Count * 2;
+
+            PostUpdateCommands.RemoveComponent<SpawnAllComponent>(e);
 
             // Using a .TempJob instead of a .Temp for `spawnPositions`, because the method
             // `RandomPointsInUnitSphere` passes this NativeArray into a Job
-            var spawnPositions = new NativeArray<float3>(toSpawnCount, Allocator.TempJob);
+            var spawnPositions = new NativeArray<float3>(totalCount, Allocator.TempJob);
             GeneratePoints.RandomPointsInUnitSphere(spawnPositions);
 
             // Calling Instantiate once per spawned Entity is rather slow, and not recommended
             // This code is placeholder until we add the ability to bulk-instantiate many entities from an ECB
-            var entities = new NativeArray<Entity>(toSpawnCount, Allocator.Temp);
-            for (int i = 0; i < toSpawnCount; ++i)
+            int index = 0;
+            var entities = new NativeArray<Entity>(totalCount, Allocator.Temp);
+            while (index < totalCount)
             {
-                entities[i] = PostUpdateCommands.Instantiate(sac.Prefab);
+                entities[index++] = PostUpdateCommands.Instantiate(sac.RockPrefab);
+                entities[index++] = PostUpdateCommands.Instantiate(sac.TinCanPrefab);
             }
 
-            for (int i = 0; i < toSpawnCount; i++)
+            index = 0;
+            while(index < totalCount)
             {
-                PostUpdateCommands.SetComponent(entities[i], new Translation
+                PostUpdateCommands.SetComponent(entities[index], new Translation
                 {
-                    Value = spawnPositions[i] * 10f
+                    Value = spawnPositions[index] * 10f
                 });
+                PostUpdateCommands.AddComponent(entities[index], new RockComponent());
+                index++;
+                
+                PostUpdateCommands.SetComponent(entities[index], new Translation
+                {
+                    Value = spawnPositions[index] * 5f
+                });
+                PostUpdateCommands.AddComponent(entities[index], new TinCanComponent());
+                index++;
             }
-
-            PostUpdateCommands.RemoveComponent<SpawnAllComponent>(e);
 
             spawnPositions.Dispose();
             entities.Dispose();
