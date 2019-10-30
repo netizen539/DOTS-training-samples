@@ -33,25 +33,24 @@ public class SpawnAllEntitiesSystem : ComponentSystem
             var entities = new NativeArray<Entity>(totalCount, Allocator.Temp);
             while (index < totalCount)
             {
-                entities[index++] = PostUpdateCommands.Instantiate(sac.RockPrefab);
-                entities[index++] = PostUpdateCommands.Instantiate(sac.TinCanPrefab);
-            }
-
-            index = 0;
-            while(index < totalCount)
-            {
+                entities[index] = PostUpdateCommands.Instantiate(sac.RockPrefab);
                 PostUpdateCommands.SetComponent(entities[index], new Translation
                 {
                     Value = spawnPositions[index] * 10f
                 });
                 PostUpdateCommands.AddComponent(entities[index], new RockComponent());
+                PostUpdateCommands.AddComponent(entities[index], new InitComponentTag()); //TODO Need to fill in data
+                PostUpdateCommands.AddComponent(entities[index], new SizeableComponent()); //TODO Need to fill in data
                 index++;
-                
+
+                entities[index] = PostUpdateCommands.Instantiate(sac.TinCanPrefab);
                 PostUpdateCommands.SetComponent(entities[index], new Translation
                 {
                     Value = spawnPositions[index] * 5f
                 });
                 PostUpdateCommands.AddComponent(entities[index], new TinCanComponent());
+                PostUpdateCommands.AddComponent(entities[index], new InitComponentTag()); //TODO Need to fill in data
+                PostUpdateCommands.AddComponent(entities[index], new SizeableComponent()); //TODO Need to fill in data
                 index++;
             }
 
