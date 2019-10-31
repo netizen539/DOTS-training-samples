@@ -1,9 +1,8 @@
 using Unity.Entities;
 
 [System.Serializable]
-public struct TinCanSharedDataComponent : ISharedComponentData
+public struct TinCanSharedDataComponent : IComponentData
 {
-    public Entity Prefab;
     public float MinHeightFromGround;
     public float MaxHeightFromGround;
     public float SizeGrowthFactor;

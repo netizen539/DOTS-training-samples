@@ -1,9 +1,8 @@
 using Unity.Entities;
 
 [System.Serializable]
-public struct RockSharedDataComponent : ISharedComponentData
+public struct RockSharedDataComponent : IComponentData
 {
-    public Entity Prefab;
     public float MinRockSize;
     public float MaxRockSize;
     public float SizeGrowthFactor;

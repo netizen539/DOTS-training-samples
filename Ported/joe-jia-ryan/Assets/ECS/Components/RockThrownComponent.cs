@@ -4,7 +4,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 [Serializable]
-public struct ConveyorComponent : IComponentData
+public struct RockThrownComponent : IComponentData
 {
     // Add fields to your component here. Remember that:
     //
@@ -19,9 +19,6 @@ public struct ConveyorComponent : IComponentData
     // * You should focus on the data structure that makes the most sense
     //   for runtime use here. Authoring Components will be used for 
     //   authoring the data in the Editor.
-
-    public float Speed;
-    public float3 Direction;
-    public float ResetX;
-    public float MaxX;  
+    
+    public float3 Velocity;   
 }

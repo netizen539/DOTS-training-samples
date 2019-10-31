@@ -2,6 +2,7 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 
 [Serializable]
 public struct TinCanComponent : IComponentData
@@ -19,6 +20,8 @@ public struct TinCanComponent : IComponentData
     // * You should focus on the data structure that makes the most sense
     //   for runtime use here. Authoring Components will be used for 
     //   authoring the data in the Editor.
-    
+
+    public Vector2 RangeY;
+	public int ReserveTime;
     
 }

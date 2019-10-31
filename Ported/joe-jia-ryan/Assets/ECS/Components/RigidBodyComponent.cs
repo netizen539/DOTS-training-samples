@@ -2,7 +2,6 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using UnityEngine;
 
 [Serializable]
 public struct RigidBodyComponent : IComponentData
@@ -22,6 +21,6 @@ public struct RigidBodyComponent : IComponentData
     //   authoring the data in the Editor.
 
     public float Gravity;
-    public Vector3 Velocity;
-    public Vector3 AngularVelocity;
+    public float3 Velocity;
+    public float3 AngularVelocity;
 }
