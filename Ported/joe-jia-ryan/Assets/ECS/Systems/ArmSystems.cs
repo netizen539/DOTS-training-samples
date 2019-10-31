@@ -119,13 +119,9 @@ public class IdleArmSystem : JobComponentSystem
     
     struct IdleArmJob : IJobForEachWithEntity<ArmIdleTag, ArmComponent, Translation>
     {
-        [DeallocateOnJobCompletion]
-        public NativeArray<ArchetypeChunk> chunks;
-        
-        [ReadOnly]
-        public ArchetypeChunkComponentType<Translation> translationType;
-        [ReadOnly]
-        public ArchetypeChunkEntityType entityType;
+        [DeallocateOnJobCompletion] [ReadOnly] public NativeArray<ArchetypeChunk> chunks;
+        [ReadOnly] public ArchetypeChunkComponentType<Translation> translationType;
+        [ReadOnly] public ArchetypeChunkEntityType entityType;
 
         public EntityCommandBuffer.Concurrent ecb;
 
@@ -163,9 +159,7 @@ public class IdleArmSystem : JobComponentSystem
 
             if (closestRock != Entity.Null)
             {
-                ecb.RemoveComponent<ConveyorComponent>(index, closestRock);
                 ecb.AddComponent(index, closestRock, new ReservedTag());
-                
                 ecb.RemoveComponent<ArmIdleTag>(index, armEntity);
                 ecb.AddComponent(index, armEntity, new ArmReachingTag
                 {
@@ -208,15 +202,15 @@ public class IdleArmSystem : JobComponentSystem
 public class ReachingArmSystem : JobComponentSystem
 {
     public ComponentDataFromEntity<Translation> translationTypeFromEntity;
-    public ComponentDataFromEntity<NonUniformScale> scaleTypeFromEntity;
+    public ComponentDataFromEntity<Scale> scaleTypeFromEntity;
 
     public BeginInitializationEntityCommandBufferSystem ecbSystem;
 
-    [BurstCompile]
+    //[BurstCompile]
     struct ReachingArmJob : IJobForEachWithEntity<ArmReachingTag, ArmComponent, Translation>
     {
         [ReadOnly] public ComponentDataFromEntity<Translation> translationsFromEntity;
-        [ReadOnly] public ComponentDataFromEntity<NonUniformScale> scalesFromEntity;
+        [ReadOnly] public ComponentDataFromEntity<Scale> scalesFromEntity;
         public EntityCommandBuffer.Concurrent ecb;
         [ReadOnly] public float deltaTime;
         
@@ -224,9 +218,7 @@ public class ReachingArmSystem : JobComponentSystem
         {
             Entity intendedRock = tag.rockToReachFor;
             Translation intendedRockTranslation = translationsFromEntity[intendedRock];
-            NonUniformScale intendedRockScale = scalesFromEntity[intendedRock];
-            
-            
+            Scale intendedRockScale = scalesFromEntity[intendedRock];
             float3 delta = intendedRockTranslation.Value - translation.Value;
 
             if (math.lengthsq(delta) < armComponent.maxReachLength * armComponent.maxReachLength)
@@ -236,18 +228,17 @@ public class ReachingArmSystem : JobComponentSystem
                 flatDelta.y = 0;
                 flatDelta = math.normalize(flatDelta);
 
-                float intendedRockSize = intendedRockScale.Value.x; //TODO resolve a non-uniform scale? Assume it's uniform for now.
+                float intendedRockSize = intendedRockScale.Value;
                 armComponent.lastIntendedRockSize = intendedRockSize;
                 armComponent.grabHandTarget = intendedRockTranslation.Value + directions.up * intendedRockSize * .5f -
                                          flatDelta * intendedRockSize * .5f;
                 armComponent.lastIntendedRockPos = intendedRockTranslation.Value;
                 
-
-                
                 armComponent.reachingTimer += deltaTime / armComponent.reachDuration;
                 if (armComponent.reachingTimer >= 1f)
                 {
                     // We've arrived at the rock
+                    ecb.RemoveComponent<ConveyorComponent>(index, intendedRock);
                     ecb.AddComponent(index, intendedRock, new RockHeldComponent());
                     ecb.RemoveComponent<ConveyorComponent>(index, intendedRock);
                     ecb.RemoveComponent<ArmReachingTag>(index, armEntity);
@@ -275,7 +266,9 @@ public class ReachingArmSystem : JobComponentSystem
             else
             {
                 // Rock has eluded our grasp. Unreserve the rock.
-                ecb.RemoveComponent<ReservedTag>(index, intendedRock);        
+                ecb.RemoveComponent<ReservedTag>(index, intendedRock);
+                ecb.RemoveComponent<ArmReachingTag>(index, armEntity);
+                ecb.AddComponent(index, armEntity, new ArmResetTag());
             }
         }
     }
@@ -288,7 +281,7 @@ public class ReachingArmSystem : JobComponentSystem
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         translationTypeFromEntity = GetComponentDataFromEntity<Translation>(true);
-        scaleTypeFromEntity = GetComponentDataFromEntity<NonUniformScale>(true);
+        scaleTypeFromEntity = GetComponentDataFromEntity<Scale>(true);
 
         var reachingJob = new ReachingArmJob()
         {
@@ -314,16 +307,9 @@ public class HoldingArmSystem : JobComponentSystem
     struct HoldingArmJob : IJobForEachWithEntity<ArmHoldingTag, ArmComponent, Translation>
     {
         [ReadOnly] public ComponentDataFromEntity<RockHeldComponent> rockHeldCompsFromEntity;
-        [DeallocateOnJobCompletion]
-        public NativeArray<ArchetypeChunk> chunks;
-        
-        [ReadOnly]
-        public ArchetypeChunkComponentType<Translation> translationType;
-        [ReadOnly]
-        public ArchetypeChunkEntityType entityType;
-  //      [ReadOnly]
-   //     public ArchetypeChunkComponentType<RigidBodyComponent> rigidBodyType;
-
+        [DeallocateOnJobCompletion] [ReadOnly] public NativeArray<ArchetypeChunk> chunks;
+        [ReadOnly] public ArchetypeChunkComponentType<Translation> translationType;
+        [ReadOnly] public ArchetypeChunkEntityType entityType;
         public float deltaTime;
         public EntityCommandBuffer.Concurrent ecb;
         
@@ -360,19 +346,10 @@ public class HoldingArmSystem : JobComponentSystem
                 
                 if (closestCan != Entity.Null)
                 {
-                    Debug.Log("RJ setting can target:"+closestCan.Index);
                     armComponent.targetCan = closestCan;
                 }
-                else
-                {
-                    Debug.Log("RJ no can in range.");
-                }
             }
-            else
-            {
-                Debug.Log("RJ we have target can entity:"+armComponent.targetCan.Index);
-            }
-
+        
             if (armComponent.targetCan != Entity.Null)
             {
                 ecb.AddComponent(index, armComponent.targetCan, new ReservedTag());
@@ -422,6 +399,7 @@ public class HoldingArmSystem : JobComponentSystem
     }
 }
 
+[AlwaysUpdateSystem]
 public class ThrowingArmSystem : JobComponentSystem
 {
     public ComponentDataFromEntity<Translation> translationTypeFromEntity;
@@ -438,7 +416,6 @@ public class ThrowingArmSystem : JobComponentSystem
         public void Execute(Entity entity, int index, [ReadOnly] ref ArmThrowingTag tag, ref ArmComponent armComponent, [ReadOnly] ref Translation translation)
         {
             armComponent.windupTimer += deltaTime / armComponent.windupDuration;
-            Debug.Log("RJ ThrowingArmJob: using target can:"+armComponent.targetCan.Index);
             RigidBodyComponent targetCanRigidBody = rigidBodyFromEntity[armComponent.targetCan];
             Translation targetCanTranslation = translationsFromEntity[armComponent.targetCan];
 
@@ -480,7 +457,6 @@ public class ThrowingArmSystem : JobComponentSystem
                 
                 if (armComponent.throwTimer > .15f && armComponent.heldRock != Entity.Null) {
                     // release the rock
-                    Debug.Log("RJ releasing the rock:"+armComponent.heldRock.Index);
                     ecb.RemoveComponent<RockHeldComponent>(index, armComponent.heldRock);
                     var rockThrownComp = new RockThrownComponent
                     {
@@ -497,7 +473,7 @@ public class ThrowingArmSystem : JobComponentSystem
                     armComponent.targetCan = Entity.Null;
                     
                     ecb.RemoveComponent<ArmThrowingTag>(index, entity);
-                    ecb.AddComponent(index, entity, new ArmIdleTag());
+                    ecb.AddComponent(index, entity, new ArmResetTag());
                 }
             }
         }
@@ -525,18 +501,46 @@ public class ThrowingArmSystem : JobComponentSystem
     }
 }
 
-/*
+[AlwaysUpdateSystem]
 public class ResetArmSystem : JobComponentSystem
 {
+    public EndSimulationEntityCommandBufferSystem ecbSystem;
+
+    struct ResetArmJob : IJobForEachWithEntity<ArmResetTag, ArmComponent>
+    {
+        public EntityCommandBuffer.Concurrent ecb;
+        
+        public void Execute(Entity entity, int index, [ReadOnly] ref ArmResetTag tag, ref ArmComponent armComponent)
+        {
+            armComponent.grabHandTarget = new float3();
+            armComponent.lastIntendedRockSize = 0;
+            armComponent.lastIntendedRockPos = new float3();
+            armComponent.savedGrabT = 0f;
+            armComponent.reachingTimer = 0f;
+            armComponent.throwTimer = 0f;
+            armComponent.windupTimer = 0f;
+            
+            ecb.RemoveComponent<ArmResetTag>(index, entity);
+            ecb.AddComponent(index, entity, new ArmIdleTag());
+        }
+    }
+    
+    protected override void OnCreate()
+    {
+        ecbSystem =  World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
+    }
+    
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
-        JobHandle handle = Entities
-            .ForEach( (Entity entity, ref ArmResetTag tag, ref ArmComponent armComponent) =>
-            {
-            }).Schedule(inputDeps);
+        var job = new ResetArmJob()
+        {
+            ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
+        };
+        var handle = job.Schedule(this, inputDeps);
+        ecbSystem.AddJobHandleForProducer(handle);
         return handle;
     }
-}*/
+}
 
 // FABRIK: Forward-And-Backward-Reaching Inverse Kinematics
 // "Each tick:  Drag the chain (from the end) to the target point,
@@ -558,10 +562,14 @@ public static class FABRIK {
         }
     }
 }
+
+[AlwaysUpdateSystem]
 public class ArmAnimationSystem : JobComponentSystem
 {
     public static AnimationCurve throwCurve;
-    
+    public EndInitializationEntityCommandBufferSystem ecbSystem;
+
+
     struct ArmAnimationJob : IJobForEachWithEntity<ArmComponent, Translation, Rotation>
     {
         public float worldTime;
@@ -570,6 +578,8 @@ public class ArmAnimationSystem : JobComponentSystem
         [NativeDisableParallelForRestriction]
         public BufferFromEntity<ArmMatrixBuffer> matrixBufferLookup;
 
+        public EntityCommandBuffer.Concurrent ecb;
+        
         public void Execute(Entity entity, int index, ref ArmComponent armComponent, 
             [ReadOnly] ref Translation translation, [ReadOnly] ref Rotation rotation)
         {
@@ -606,16 +616,18 @@ public class ArmAnimationSystem : JobComponentSystem
             float time = worldTime + armComponent.timeOffset;
             
             // solve the arm IK chain first
-            FABRIK.Solve(armChain,armBoneLength, translation.Value, armComponent.handTarget,handUp*armBendStrength);
+            float3 anchor = translation.Value;
+            //float3 anchor = new float3();
+            FABRIK.Solve(armChain,armBoneLength, anchor, armComponent.handTarget,handUp*armBendStrength);
 
             Quaternion q = rotation.Value;
-            float3 transformRight = math.mul(q, directions.right);
+            float3 transformRight = math.normalize(math.mul(q, directions.right));
             
             // figure out our current "hand vectors" from our arm orientation
-            float3 handForward = util.Last(armChain, 0) - math.normalize(util.Last(armChain, 1));
+            float3 handForward = math.normalize(util.Last(armChain, 0) - util.Last(armChain, 1));
             handUp = math.normalize(math.cross(handForward,transformRight));
-            float3 handRight = Vector3.Cross(handUp,handForward);
-
+            float3 handRight = math.cross(handUp,handForward);
+            
             // create handspace-to-worldspace matrix
             armComponent.handMatrix = Matrix4x4.TRS(util.Last(armChain, 0),Quaternion.LookRotation(handForward,handUp),directions.one);
 
@@ -624,7 +636,13 @@ public class ArmAnimationSystem : JobComponentSystem
             float fingerGrabT = armComponent.savedGrabT;
             if (armComponent.heldRock != Entity.Null)
             {
+                //Translation heldRockTrans = translationsFromEntity[armComponent.heldRock];
                 fingerGrabT = 1.0f; //When holding the rock, we're fully gripped.
+                
+                 var held = new RockHeldComponent();
+                 held.rockInHandPosition = armComponent.handMatrix.MultiplyPoint3x4(armComponent.heldRockOffset);
+                 ecb.AddComponent(index, armComponent.heldRock, held);
+                //   armComponent.lastIntendedRockPos = 
             }
            
             // create rendering matrices for arm bones
@@ -643,9 +661,12 @@ public class ArmAnimationSystem : JobComponentSystem
             float[] fingerThicknesses = {0.05f, 0.05f, 0.05f, 0.05f};
             float fingerBendStrength = 0.2f;
 
-            for (int i=0;i<fingerChains.Length;i++) {
+            for (int i=0;i<fingerChains.Length;i++)
+            {
+                float3 handRightTemp = handRight * (fingerXOffset + i * fingerSpacing);
+               // Debug.Log("RJ handRightTemp:"+handRightTemp);
                 // find knuckle position for this finger
-                float3 fingerPos = handPos + handRight * (fingerXOffset + i * fingerSpacing);
+                float3 fingerPos = handPos + handRightTemp;
 
                 // find resting position for this fingertip
                 float3 fingerTarget = fingerPos + handForward * (.5f-.1f*fingerGrabT);
@@ -700,10 +721,12 @@ public class ArmAnimationSystem : JobComponentSystem
     
     protected override void OnCreate()
     {
+        ecbSystem =  World.GetOrCreateSystem<EndInitializationEntityCommandBufferSystem>();
     }
     
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
+
         GlobalData gd = util.GetGlobalData();
         if (!gd)
         {
@@ -718,19 +741,22 @@ public class ArmAnimationSystem : JobComponentSystem
         {
             worldTime = Time.time,
             matrixBufferLookup = GetBufferFromEntity<ArmMatrixBuffer>(),
+            ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
         };
         var handle = job.Schedule(this, inputDeps);
+        ecbSystem.AddJobHandleForProducer(handle);
         return handle;
     }
 }
 
 public class ArmAnimationSystemMainThread : ComponentSystem
 {
+    private Matrix4x4[] matrices;
 
-    
+
     protected override void OnCreate()
     {
-        
+        matrices = new Matrix4x4[18];
     }
     
     protected override void OnUpdate()
@@ -741,7 +767,6 @@ public class ArmAnimationSystemMainThread : ComponentSystem
         Entities.ForEach((Entity entity, ref ArmComponent armComponent) =>
         {
             DynamicBuffer<ArmMatrixBuffer> buffer = EntityManager.GetBuffer<ArmMatrixBuffer>(entity);
-            Matrix4x4[] matrices = new Matrix4x4[18];
             for (int i = 0; i < buffer.Length; i++)
             {
                 matrices[i] = buffer[i].Value;
@@ -749,8 +774,18 @@ public class ArmAnimationSystemMainThread : ComponentSystem
 
            Graphics.DrawMeshInstanced(util.GetGlobalData().armMesh ,0, util.GetGlobalData().armMaterial, matrices);
         });
-        
-
     }
 }
+
+/*
+public class ArmInitSystem : JobComponentSystem
+{
+    
+    struct ArmInitJob : IJobForEachWithEntity<>
+    
+    protected override JobHandle OnUpdate(JobHandle inputDeps)
+    {
+    }
+}
+*/
 

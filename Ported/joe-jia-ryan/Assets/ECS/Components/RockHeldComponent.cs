@@ -7,5 +7,4 @@ using Unity.Mathematics;
 public struct RockHeldComponent : IComponentData
 {
     public float3 rockInHandPosition;
-    public float3 Velocity;
 }
