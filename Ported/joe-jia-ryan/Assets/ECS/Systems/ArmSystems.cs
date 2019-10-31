@@ -99,7 +99,7 @@ public class IdleArmSystem : JobComponentSystem
             All = new ComponentType[] { ComponentType.ReadOnly<ConvoyorComponent>() , ComponentType.ReadOnly<Translation>(), }
         };
         query = GetEntityQuery(queryDescription);
-        ecbSystem =  World.Active.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+        ecbSystem =  World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
     }
     
     protected override JobHandle OnUpdate(JobHandle inputDeps)
@@ -123,12 +123,15 @@ public class IdleArmSystem : JobComponentSystem
 public class ReachingArmSystem : JobComponentSystem
 {
     public ComponentDataFromEntity<Translation> translationTypeFromEntity;
+    public ComponentDataFromEntity<NonUniformScale> scaleTypeFromEntity;
+
     public BeginInitializationEntityCommandBufferSystem ecbSystem;
 
     [BurstCompile]
     struct ReachingArmJob : IJobForEachWithEntity<ArmReachingTag, ArmComponent, Translation>
     {
         [ReadOnly] public ComponentDataFromEntity<Translation> translationsFromEntity;
+        [ReadOnly] public ComponentDataFromEntity<NonUniformScale> scalesFromEntity;
         public EntityCommandBuffer.Concurrent ecb;
 
         [ReadOnly] public float deltaTime;
@@ -137,8 +140,9 @@ public class ReachingArmSystem : JobComponentSystem
         {
             Entity intendedRock = tag.rockToReachFor;
             Translation intendedRockTranslation = translationsFromEntity[intendedRock];
-            float intendedRockSize = 1.0f; //RJ TODO grab from entity scale.
-
+            NonUniformScale intendedRockScale = scalesFromEntity[intendedRock];
+            
+            
             float3 delta = intendedRockTranslation.Value - translation.Value;
             //Debug.Log("RJ delta:"+delta+" from rock at:"+intendedRockTranslation.Value);
 
@@ -149,9 +153,14 @@ public class ReachingArmSystem : JobComponentSystem
                 flatDelta.y = 0;
                 flatDelta = math.normalize(flatDelta);
 
-                float3 mGrabHandTarget = intendedRockTranslation.Value + directions.up * intendedRockSize * .5f -
+                float intendedRockSize = intendedRockScale.Value.x; //TODO resolve a non-uniform scale? Assume it's uniform for now.
+                armComponent.lastIntendedRockSize = intendedRockSize;
+                armComponent.grabHandTarget = intendedRockTranslation.Value + directions.up * intendedRockSize * .5f -
                                          flatDelta * intendedRockSize * .5f;
-                //RJ TODO GrabHandTarget should go on arm component so animation system can use it?
+                armComponent.lastIntendedRockPos = intendedRockTranslation.Value;
+                
+
+                
                 armComponent.reachingTimer += deltaTime / armComponent.reachDuration;
                 if (armComponent.reachingTimer >= 1f)
                 {
@@ -176,16 +185,18 @@ public class ReachingArmSystem : JobComponentSystem
 
     protected override void OnCreate()
     {
-        ecbSystem =  World.Active.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+        ecbSystem =  World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
     }
     
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         translationTypeFromEntity = GetComponentDataFromEntity<Translation>(true);
+        scaleTypeFromEntity = GetComponentDataFromEntity<NonUniformScale>(true);
 
         var reachingJob = new ReachingArmJob()
         {
             translationsFromEntity = translationTypeFromEntity,
+            scalesFromEntity = scaleTypeFromEntity,
             ecb = ecbSystem.CreateCommandBuffer().ToConcurrent(),
             deltaTime = Time.deltaTime
         };
@@ -274,7 +285,7 @@ public class ArmAnimationSystem : JobComponentSystem
             float3[][] fingerChains;
             float3[] thumbChain;
             Matrix4x4[] matrices;
-            float3 grabHandTarget = armComponent.handTarget;
+            float3 grabHandTarget = armComponent.grabHandTarget;
             float armBoneLength = armComponent.armBoneLength;
             float3 handUp = armComponent.handUp;
             float armBendStrength = armComponent.armBendStrength;
@@ -298,8 +309,7 @@ public class ArmAnimationSystem : JobComponentSystem
             //////////////////////////////////////////
             // Resting position for hand
             float time = worldTime + armComponent.timeOffset;
-            //float3 idleHandTarget = translation.Value+new float3(Mathf.Sin(time)*.35f,1f+Mathf.Cos(time*1.618f)*.5f,1.5f);
-            float3 idleHandTarget = new float3(1,1,1);
+            float3 idleHandTarget = translation.Value+new float3(Mathf.Sin(time)*.35f,1f+Mathf.Cos(time*1.618f)*.5f,1.5f);
            
             armComponent.reachingTimer = Mathf.Clamp01(armComponent.reachingTimer);
 

@@ -1,5 +1,6 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -22,6 +23,8 @@ public class RockDebug_Authoring : MonoBehaviour, IConvertGameObjectToEntity
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
         dstManager.AddComponentData(entity, new RockComponent());
+       // var scaleComp = new Scale() {Value = 10.0f};
+       // dstManager.AddComponentData(entity, scaleComp);
         if (addConvyer)
         {
             dstManager.AddComponentData(entity, new ConvoyorComponent());

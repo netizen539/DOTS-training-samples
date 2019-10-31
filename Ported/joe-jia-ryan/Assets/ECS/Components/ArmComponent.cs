@@ -10,7 +10,7 @@ public struct ArmComponent : IComponentData
     public float maxReachLength;
     public float reachingTimer;
     public float reachDuration;
-    public float3 handTarget;
+    public float3 grabHandTarget;
     public float armBoneLength;
     public float armBendStrength;
     public float armBoneThickness;
