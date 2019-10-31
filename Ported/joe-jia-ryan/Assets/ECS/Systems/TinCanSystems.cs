@@ -68,19 +68,24 @@ public class TinCanResetSystem : JobComponentSystem
 {
     BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
     EntityQuery m_ArmDataQuery;
+    EntityQuery m_tinCanDataQuery;
 
     protected override void OnCreate()
     {
         base.OnCreate();
         m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
         m_ArmDataQuery = GetEntityQuery(typeof(ThrowingArmsSharedDataComponent));
+        m_tinCanDataQuery = GetEntityQuery(typeof(TinCanSharedDataComponent));
     }
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         var commandBuffer = m_EntityCommandBufferSystem.CreateCommandBuffer().ToConcurrent();
         var throwingArmsComponentArray = m_ArmDataQuery.ToComponentDataArray<ThrowingArmsSharedDataComponent>(Allocator.TempJob);
+        var tinCanComponentArray = m_tinCanDataQuery.ToComponentDataArray < TinCanSharedDataComponent>(Allocator.TempJob);
         float TotalArmsWidth = throwingArmsComponentArray[0].ConveyorWidth;
+        float minY = tinCanComponentArray[0].MinHeightFromGround;
+        float maxY = tinCanComponentArray[0].MaxHeightFromGround;
 
         var job = Entities.WithAll<TinCanComponent, ResetTag>().ForEach(
             (int entityInQueryIndex, Entity e, ref Translation translation, ref Rotation rotation, ref Scale scale, ref SizeableComponent sizeable, ref RigidBodyComponent rigidBody) =>
@@ -88,10 +93,11 @@ public class TinCanResetSystem : JobComponentSystem
                 commandBuffer.RemoveComponent<ReservedTag>(entityInQueryIndex, e);
                 commandBuffer.RemoveComponent<ResetTag>(entityInQueryIndex, e);
 
-                translation.Value.x = TotalArmsWidth + 10f;
+                Unity.Mathematics.Random Rand = new Unity.Mathematics.Random((uint)entityInQueryIndex + 1);
+                translation.Value = new float3(TotalArmsWidth + 10f, Rand.NextFloat(minY, maxY), 0f);
                 rotation.Value = quaternion.identity;
-                scale.Value = 0.001f;
-                sizeable.CurrentSize = 0.001f;
+                scale.Value = 0f;
+                sizeable.CurrentSize = 0f;
                 rigidBody.Velocity = float3.zero;
                 rigidBody.AngularVelocity = float3.zero;                
 
@@ -104,7 +110,9 @@ public class TinCanResetSystem : JobComponentSystem
             }).Schedule(inputDeps);
 
         m_EntityCommandBufferSystem.AddJobHandleForProducer(job);
+
         throwingArmsComponentArray.Dispose();
+        tinCanComponentArray.Dispose();
 
         return job;
     }
