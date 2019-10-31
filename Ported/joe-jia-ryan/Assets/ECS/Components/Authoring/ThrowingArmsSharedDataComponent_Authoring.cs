@@ -8,7 +8,6 @@ public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvert
 {
     public GameObject RockPrefab;
     public GameObject TinCanPrefab;
-    public GameObject ArmPrefab;
     public int ArmCount;
     public float ArmWidth;
     public float ConveyorMargin;
@@ -19,7 +18,6 @@ public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvert
         var spawn = new SpawnAllComponent{ 
             RockPrefab = conversionSystem.GetPrimaryEntity(this.RockPrefab),
             TinCanPrefab = conversionSystem.GetPrimaryEntity(this.TinCanPrefab),
-            ArmPrefab = conversionSystem.GetPrimaryEntity(this.ArmPrefab),
             Count = count
         };
         dstManager.AddComponentData(entity, spawn);
@@ -44,7 +42,6 @@ public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvert
     {
         referencedPrefabs.Add(RockPrefab);
         referencedPrefabs.Add(TinCanPrefab);
-        referencedPrefabs.Add(ArmPrefab);
     }
 
 }

@@ -19,9 +19,9 @@ public class RockHeldSystem : JobComponentSystem
         .WithName("RockHeldSystem")
         .WithAll<RockComponent>()
         .ForEach(
-            (int entityInQueryIndex, Entity e, ref RockHeldComponent rhc, ref Translation pos) =>
+            (int entityInQueryIndex, Entity e, ref RockHeldComponent rhc, ref Translation pos) => 
             {
-                pos.Value = rhc.rockInHandPosition;
+                pos.Value += deltaTime * rhc.Velocity;
             })
             .Schedule(jobHandle);
 

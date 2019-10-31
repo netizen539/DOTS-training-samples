@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4003422728916270}
   - component: {fileID: 114522796547406984}
-  - component: {fileID: 4560081633822612982}
   m_Layer: 0
   m_Name: Arm
   m_TagString: Untagged
@@ -41,24 +40,34 @@ MonoBehaviour:
   m_GameObject: {fileID: 1092234786245138}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b1a679d715c3c4ef4a8b34656eaa6eb9, type: 3}
+  m_Script: {fileID: 11500000, guid: 8a0958fec2d3e7848b3ebe64869114fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxReachLength: 1.8
-  reachDuration: 1
-  armBoneLength: 1
-  armBendStrength: 0.1
-  armBoneThickness: 0.15
---- !u!114 &4560081633822612982
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1092234786245138}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea7d7495833204790ba1d3a8755397f8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ConversionMode: 0
+  armBoneLength: 0
+  armBoneThickness: 0
+  armBendStrength: 0
+  maxReachLength: 0
+  reachDuration: 0
+  maxHandSpeed: 0
+  grabTimerSmooth: 0
+  fingerBoneLengths: []
+  fingerThicknesses: []
+  fingerXOffset: 0
+  fingerSpacing: 0
+  fingerBendStrength: 0
+  thumbBoneLength: 0
+  thumbThickness: 0
+  thumbBendStrength: 0
+  thumbXOffset: 0
+  windupDuration: 0
+  throwDuration: 0
+  throwCurve:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  baseThrowSpeed: 0
+  targetXRange: 0
+  material: {fileID: 2100000, guid: b998c5af23f4ade4a94568cc7bb3bff6, type: 2}
+  boneMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
