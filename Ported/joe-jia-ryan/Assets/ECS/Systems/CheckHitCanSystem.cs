@@ -9,17 +9,19 @@ using Unity.Collections;
 [UpdateAfter(typeof(InertialSystem))]
 public class CheckHitCanSystem : JobComponentSystem
 {
+    BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
     EntityQuery m_TinCanQuery;
 
     protected override void OnCreate()
     {
-        m_TinCanQuery = GetEntityQuery(typeof(TinCanComponent), typeof(Translation), ComponentType.Exclude(typeof(ReservedTag)));
+        m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+        m_TinCanQuery = GetEntityQuery(typeof(TinCanComponent), typeof(Translation), typeof(RigidBodyComponent), typeof(ConveyorComponent));
     }
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         var tinCansArray = m_TinCanQuery.ToEntityArray(Allocator.TempJob);
         var tinCanPositionsArray = m_TinCanQuery.ToComponentDataArray<Translation>(Allocator.TempJob);
-        var ecb = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>().CreateCommandBuffer().ToConcurrent();
+        var ecb = m_EntityCommandBufferSystem.CreateCommandBuffer().ToConcurrent();
         float deltaTime = Time.deltaTime;
         var jobHandle = inputDeps;
 
@@ -29,24 +31,31 @@ public class CheckHitCanSystem : JobComponentSystem
         .WithDeallocateOnJobCompletion(tinCansArray)
         .WithDeallocateOnJobCompletion(tinCanPositionsArray)
         .ForEach(
-            (int entityInQueryIndex, Entity e, ref Translation pos) => 
+            (int entityInQueryIndex, Entity e, ref Translation pos, ref RigidBodyComponent rigidBody) =>
             {
-                int index = 0;
-                while (index < tinCansArray.Length)
+            int index = 0;
+            while (index < tinCansArray.Length)
+            {
+                Translation tcpos = tinCanPositionsArray[index];
+                if (math.distance(pos.Value, tcpos.Value) < 0.25f)
                 {
-                    Translation tcpos = tinCanPositionsArray[index];
-                    if (math.distance(pos.Value, tcpos.Value) < 0.25f)
-                    {
-                        var tce = tinCansArray[index];
-                        ecb.AddComponent(entityInQueryIndex, tce, new TinCanHitTag());
-                        break;
-                    }
-                    index++;
+                    var tce = tinCansArray[index];
+                    ecb.RemoveComponent<ConveyorComponent>(entityInQueryIndex, tce);
+                    ecb.AddComponent(entityInQueryIndex, tce, new InFlightTag());
+
+                    Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)index + 1);
+                    RigidBodyComponent tinCanRigidBody = new RigidBodyComponent { Gravity = 20f };                    
+                    tinCanRigidBody.Velocity = rigidBody.Velocity;
+                    tinCanRigidBody.AngularVelocity = math.radians(math.normalize(rand.NextFloat3()) * math.length(rigidBody.Velocity) * 40f);
+                    ecb.SetComponent(entityInQueryIndex, tce, tinCanRigidBody);
+                    break;
                 }
-            })
+                index++;
+            }})
             .Schedule(jobHandle);
 
- 
+        m_EntityCommandBufferSystem.AddJobHandleForProducer(jobHandle);
+
         return jobHandle;
     }
 }

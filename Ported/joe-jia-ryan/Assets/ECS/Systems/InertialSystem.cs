@@ -24,11 +24,14 @@ public class InertialSystem : JobComponentSystem
             (int entityInQueryIndex, Entity e, ref RigidBodyComponent rbc, ref Translation pos, ref Rotation rot) => 
             {
                 pos.Value += rbc.Velocity * deltaTime;
-				rbc.Velocity += Up * -rbc.Gravity * deltaTime;
-    			rot.Value = math.mul(quaternion.AxisAngle(rbc.AngularVelocity, math.length(rbc.AngularVelocity) * deltaTime), rot.Value);
+				rbc.Velocity -= Up * rbc.Gravity * deltaTime;
+                quaternion rotation = math.mul(quaternion.AxisAngle(rbc.AngularVelocity, math.length(rbc.AngularVelocity) * deltaTime), rot.Value);
+                rot.Value = math.normalize(rotation);
+
             })
             .Schedule(jobHandle);
 
+        ecbs.AddJobHandleForProducer(jobHandle);
         return jobHandle;
     }
-}
+} 

@@ -51,8 +51,8 @@ public class SpawnAllEntitiesSystem : ComponentSystem
                                                                                           Velocity = float3.zero,
                                                                                           AngularVelocity = float3.zero
                 });                
-                PostUpdateCommands.AddComponent(entities[index], new SizeableComponent { ScaleFactor = 5f, TargetSize = 1f }); //TODO Need to fill in data
-                PostUpdateCommands.AddComponent(entities[index], new ResetTag());
+                PostUpdateCommands.AddComponent(entities[index], new SizeableComponent { ScaleFactor = 1f, TargetSize = 0.4f, CurrentSize = 0f }); //TODO Need to fill in data
+                PostUpdateCommands.AddComponent(entities[index], new InitComponentTag());
                 index++;
                 
                 // Spawn Arms
