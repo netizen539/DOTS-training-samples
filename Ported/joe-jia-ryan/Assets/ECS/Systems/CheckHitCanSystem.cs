@@ -13,7 +13,7 @@ public class CheckHitCanSystem : JobComponentSystem
 
     protected override void OnCreate()
     {
-        m_TinCanQuery = GetEntityQuery(typeof(TinCanComponent), typeof(Translation));
+        m_TinCanQuery = GetEntityQuery(typeof(TinCanComponent), typeof(Translation), ComponentType.Exclude(typeof(ReservedTag)));
     }
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {

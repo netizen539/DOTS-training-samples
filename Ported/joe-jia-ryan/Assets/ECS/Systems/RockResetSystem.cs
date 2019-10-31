@@ -48,7 +48,7 @@ public class RockResetSystem : JobComponentSystem
                 pos.Value = new float3(minConveyorX,0f,1.5f);
 
                 ecb.RemoveComponent<InFlightTag>(entityInQueryIndex, e);
-
+                ecb.RemoveComponent<ReservedTag>(entityInQueryIndex, e);
                 ecb.AddComponent(entityInQueryIndex, e, new ConveyorComponent
                 {
                     Speed = tac.ConveyorSpeed,
