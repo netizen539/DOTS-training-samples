@@ -22,11 +22,6 @@ public class SpawnAllEntitiesSystem : ComponentSystem
 
             PostUpdateCommands.RemoveComponent<SpawnAllComponent>(e);
 
-            // Using a .TempJob instead of a .Temp for `spawnPositions`, because the method
-            // `RandomPointsInUnitSphere` passes this NativeArray into a Job
-            var spawnPositions = new NativeArray<float3>(totalCount, Allocator.TempJob);
-            GeneratePoints.RandomPointsInUnitSphere(spawnPositions);
-
             // Calling Instantiate once per spawned Entity is rather slow, and not recommended
             // This code is placeholder until we add the ability to bulk-instantiate many entities from an ECB
             int index = 0;
@@ -34,10 +29,6 @@ public class SpawnAllEntitiesSystem : ComponentSystem
             while (index < totalCount)
             {
                 entities[index] = PostUpdateCommands.Instantiate(sac.RockPrefab);
-                PostUpdateCommands.SetComponent(entities[index], new Translation
-                {
-                    Value = spawnPositions[index] * 10f
-                });
                 PostUpdateCommands.AddComponent(entities[index], new Scale
                 {
                     Value = 0f
@@ -50,10 +41,6 @@ public class SpawnAllEntitiesSystem : ComponentSystem
 
                 // Spawn Tin Cans
                 entities[index] = PostUpdateCommands.Instantiate(sac.TinCanPrefab);
-                PostUpdateCommands.SetComponent(entities[index], new Translation
-                {
-                    Value = spawnPositions[index] * 5f
-                });
                 PostUpdateCommands.AddComponent(entities[index], new Scale { Value = 1f });
                 PostUpdateCommands.AddComponent(entities[index], new TinCanComponent { RangeY = new float2(3f, 8f),
                                                                                        ReserveTime = 3
@@ -67,7 +54,6 @@ public class SpawnAllEntitiesSystem : ComponentSystem
                 index++;
             }
 
-            spawnPositions.Dispose();
             entities.Dispose();
         });
     }
