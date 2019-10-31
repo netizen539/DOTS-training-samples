@@ -23,7 +23,11 @@ public class ArmComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity
             handUp = new float3(),
             armBendStrength = armBendStrength,
             timeOffset = Random.value * 100f,
-            armBoneThickness = armBoneThickness
+            armBoneThickness = armBoneThickness,
+            targetCan = Entity.Null,
+            heldRock = Entity.Null,
+            windupDuration = 0.7f,
+            throwDuration = 1.2f,
         };
         
         dstManager.AddComponentData(entity, data);
