@@ -8,7 +8,7 @@ using UnityEngine;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(CheckAndResetSystem))]
-public class TinCanResetSystem : JobComponentSystem
+public class TinCanInitSystem : JobComponentSystem
 
 {
     BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
@@ -78,7 +78,7 @@ public class TinCanResetSystem : JobComponentSystem
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
-        var commandBuffer = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>().CreateCommandBuffer().ToConcurrent();
+        var commandBuffer = m_EntityCommandBufferSystem.CreateCommandBuffer().ToConcurrent();
         var throwingArmsComponentArray = m_ArmDataQuery.ToComponentDataArray<ThrowingArmsSharedDataComponent>(Allocator.TempJob);
         float TotalArmsWidth = throwingArmsComponentArray[0].ConveyorWidth;
 
@@ -87,13 +87,13 @@ public class TinCanResetSystem : JobComponentSystem
             {
                 commandBuffer.RemoveComponent<ReservedTag>(entityInQueryIndex, e);
                 commandBuffer.RemoveComponent<ResetTag>(entityInQueryIndex, e);
-                commandBuffer.RemoveComponent<TinCanHitTag>(entityInQueryIndex, e);
 
                 translation.Value.x = TotalArmsWidth + 10f;
                 rotation.Value = quaternion.identity;
-                scale.Value = 0f;
-                sizeable.CurrentSize = 0f;
-                rigidBody.Velocity = rigidBody.AngularVelocity = float3.zero;                
+                scale.Value = 0.001f;
+                sizeable.CurrentSize = 0.001f;
+                rigidBody.Velocity = float3.zero;
+                rigidBody.AngularVelocity = float3.zero;                
 
                 commandBuffer.AddComponent(entityInQueryIndex, e, new ConveyorComponent
                 {
@@ -103,26 +103,17 @@ public class TinCanResetSystem : JobComponentSystem
                 });
             }).Schedule(inputDeps);
 
-        job.Complete();
+        m_EntityCommandBufferSystem.AddJobHandleForProducer(job);
         throwingArmsComponentArray.Dispose();
 
         return job;
     }
 }
 
-//public class TinCanReservedSystem
-//{
-
-//    protected override JobHandle OnUpdate(JobHandle inputDeps)
-//    {
-//        var job;
-//        return job;
-//    }
-//}
-
-public class TinCanHitSystem : JobComponentSystem
+public class TinCanReservedSystem : JobComponentSystem
 {
     BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
+    private float Total;
 
     protected override void OnCreate()
     {
@@ -131,30 +122,25 @@ public class TinCanHitSystem : JobComponentSystem
     }
 
     [BurstCompile]
-    struct TinCanInitJob : IJobForEachWithEntity<Translation, Rotation, TinCanComponent, RigidBodyComponent, TinCanHitTag>
+    struct TinCanUnreserveJob : IJobForEachWithEntity<TinCanComponent, ConveyorComponent, ReservedTag>
     {
         public EntityCommandBuffer.Concurrent CommandBuffer;
-        public float DeltaTime;
+        public float TotalTime;
 
-        public void Execute(Entity e, int index, ref Translation translation, ref Rotation rotation, [ReadOnly] ref TinCanComponent tinCan, ref RigidBodyComponent rigidBody, [ReadOnly] ref TinCanHitTag hitTag)
+        public void Execute(Entity e, int index, [ReadOnly] ref TinCanComponent tinCan, [ReadOnly] ref ConveyorComponent conveyor, [ReadOnly] ref ReservedTag reserved)
         {
-            CommandBuffer.RemoveComponent<ConveyorComponent>(index, e);
-
-            translation.Value += rigidBody.Velocity * DeltaTime;
-            rigidBody.Velocity += new float3(0f, rigidBody.Gravity * -1f * DeltaTime, 0f);
-            rotation.Value = quaternion.AxisAngle(rigidBody.AngularVelocity, math.length(rigidBody.AngularVelocity) * DeltaTime);
-
-            if (translation.Value.y < -0.5f)
-                CommandBuffer.AddComponent(index, e, new ResetTag());
+            if (TotalTime > tinCan.ReserveTime)
+                CommandBuffer.RemoveComponent<ReservedTag>(index, e);
         }
     }
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
-        var job = new TinCanInitJob
+        Total += Time.DeltaTime;
+        var job = new TinCanUnreserveJob
         {
             CommandBuffer = m_EntityCommandBufferSystem.CreateCommandBuffer().ToConcurrent(),
-            DeltaTime = Time.DeltaTime
+            TotalTime = Total
         }.Schedule(this, inputDeps);
 
         m_EntityCommandBufferSystem.AddJobHandleForProducer(job);
@@ -162,6 +148,48 @@ public class TinCanHitSystem : JobComponentSystem
         return job;
     }
 }
+
+   
+
+//public class TinCanInFlightSystem : JobComponentSystem
+//{
+//    BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
+
+//    protected override void OnCreate()
+//    {
+//        base.OnCreate();
+//        m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+//    }
+
+//    [BurstCompile]
+//    struct TinCanInFlightJob : IJobForEachWithEntity<Translation, Rotation, TinCanComponent, RigidBodyComponent, InFlightTag>
+//    {
+//        public EntityCommandBuffer.Concurrent CommandBuffer;
+//        public float DeltaTime;
+
+//        public void Execute(Entity e, int index, ref Translation translation, ref Rotation rotation, [ReadOnly] ref TinCanComponent tinCan, ref RigidBodyComponent rigidBody, [ReadOnly] ref InFlightTag inFlight)
+//        {
+//            CommandBuffer.RemoveComponent<ConveyorComponent>(index, e);
+
+//            translation.Value += rigidBody.Velocity * DeltaTime;
+//            rigidBody.Velocity += new float3(0f, rigidBody.Gravity * -1f * DeltaTime, 0f);
+//            rotation.Value = quaternion.AxisAngle(rigidBody.AngularVelocity, math.length(rigidBody.AngularVelocity) * DeltaTime);
+//        }
+//    }
+
+//    protected override JobHandle OnUpdate(JobHandle inputDeps)
+//    {
+//        var job = new TinCanInFlightJob
+//        {
+//            CommandBuffer = m_EntityCommandBufferSystem.CreateCommandBuffer().ToConcurrent(),
+//            DeltaTime = Time.DeltaTime
+//        }.Schedule(this, inputDeps);
+
+//        m_EntityCommandBufferSystem.AddJobHandleForProducer(job);
+
+//        return job;
+//    }
+//}
 
 /*[UpdateInGroup(typeof(SimulationSystemGroup))]
 public class TinCanSpawnSystem : JobComponentSystem
