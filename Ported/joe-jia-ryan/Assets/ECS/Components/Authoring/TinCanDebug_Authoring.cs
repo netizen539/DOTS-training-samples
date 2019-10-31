@@ -1,11 +1,10 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequiresEntityConversion]
-public class RockDebug_Authoring : MonoBehaviour, IConvertGameObjectToEntity
+public class TinCanDebug_Authoring : MonoBehaviour, IConvertGameObjectToEntity
 {
     // Add fields to your component here. Remember that:
     //
@@ -17,17 +16,17 @@ public class RockDebug_Authoring : MonoBehaviour, IConvertGameObjectToEntity
     //
     // For example,
     //    public float scale;
-
-    public bool addConvyer = true;
+    
+    
 
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
-        dstManager.AddComponentData(entity, new RockComponent());
-       // var scaleComp = new Scale() {Value = 10.0f};
-       // dstManager.AddComponentData(entity, scaleComp);
-        if (addConvyer)
-        {
-            dstManager.AddComponentData(entity, new ConveyorComponent());
-        }
+        dstManager.AddComponentData(entity, new TinCanComponent());
+        RigidBodyComponent rigidBodyComponent = new RigidBodyComponent();
+        rigidBodyComponent.Gravity = 25f;
+        rigidBodyComponent.Velocity = 0f;
+        rigidBodyComponent.AngularVelocity = 0f;
+        dstManager.AddComponentData(entity, rigidBodyComponent);
+
     }
 }

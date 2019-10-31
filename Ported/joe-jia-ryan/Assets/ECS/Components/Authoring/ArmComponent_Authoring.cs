@@ -12,7 +12,7 @@ public class ArmComponent_Authoring : MonoBehaviour, IConvertGameObjectToEntity
     public float armBoneLength = 1.0f;
     public float armBendStrength = 0.1f;
     public float armBoneThickness = 0.15f;
-    
+
     public void Convert(Entity entity, EntityManager dstManager, GameObjectConversionSystem conversionSystem)
     {
         var data = new ArmComponent()

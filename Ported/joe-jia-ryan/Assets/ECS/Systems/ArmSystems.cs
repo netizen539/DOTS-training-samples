@@ -1,4 +1,5 @@
-﻿using Unity.Burst;
+﻿using System;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
@@ -13,6 +14,7 @@ public class directions
     public static float3 right = new float3(1,0,0);
     public static float3 up = new float3(0,1,0);
     public static float3 one = new float3(1,1,1);
+    public static float3 forward = new float3(0, 0, 1);
 }
 
 public class util
@@ -35,7 +37,7 @@ public class util
     public static GlobalData GetGlobalData()
     {
         if (globalData)
-            return null;
+            return globalData;
         
         GameObject globalDataGO = GameObject.Find("/GlobalData");
         if (!globalDataGO)
@@ -47,6 +49,65 @@ public class util
         globalData = globalDataGO.GetComponent<GlobalData>();
         return globalData;
     }
+    
+    public static float3 AimAtCan(float3 tinCanVelocity, float3 tinCanPosition, float3 startPos, float gravity) {
+
+        // predictive aiming based on this article by Kain Shin:
+        // https://www.gamasutra.com/blogs/KainShin/20090515/83954/Predictive_Aim_Mathematics_for_AI_Targeting.php
+
+        float targetSpeed = math.length(tinCanVelocity);
+        float cosTheta = math.dot(math.normalize(startPos - tinCanPosition), math.normalize(tinCanVelocity));
+        float D = math.length(tinCanPosition - startPos);
+
+        float baseThrowSpeed = 24f;
+        // quadratic equation terms
+        float A = baseThrowSpeed * baseThrowSpeed - targetSpeed * targetSpeed;
+        float B = (2f * D * targetSpeed * cosTheta);
+        float C = -D * D;
+
+        if (B * B < 4f * A * C) {
+            // it's impossible to hit the target
+            return directions.forward*10f+directions.up*8f;
+        }
+
+        // quadratic equation has two possible outputs
+        float t1 = (-B + math.sqrt(B*B - 4f * A * C))/(2f*A);
+        float t2 = (-B - math.sqrt(B*B - 4f * A * C))/(2f*A);
+
+        // our two t values represent two possible trajectory durations.
+        // pick the best one - whichever is lower, as long as it's positive
+        float t;
+        if (t1 < 0f && t2 < 0f) {
+            // both potential collisions take place in the past!
+            return directions.forward * 10f + directions.up * 8f;
+        } else if (t1<0f && t2>0f) {
+            t = t2;
+        } else if (t1>0f && t2<0f) {
+            t = t1;
+        } else {
+            t = Mathf.Min(t1,t2);
+        }
+
+        if (float.IsNaN(t))
+        {
+            t = 1f;
+        }
+
+        if (float.IsNaN(cosTheta))
+        {
+            cosTheta = 0f;
+        }
+        
+        float3 output = tinCanVelocity -.5f*new float3(0f,-gravity,0f)*t + (tinCanPosition - startPos) / t;
+
+        if (math.length(output) >baseThrowSpeed*2f) {
+            // the required throw is too serious for us to handle
+            return directions.forward * 10f + directions.up * 8f;
+        }
+
+        return output;
+    }
+    
 }
 
 [AlwaysUpdateSystem]
@@ -68,12 +129,18 @@ public class IdleArmSystem : JobComponentSystem
 
         public EntityCommandBuffer.Concurrent ecb;
 
+        public float worldTime;
+
         public void Execute(Entity armEntity, int index, [ReadOnly] ref ArmIdleTag tag, [ReadOnly] ref ArmComponent armComponent, [ReadOnly] ref Translation translation)
         {
             float3 searchFromPos = translation.Value - directions.right * .5f;
             float tmpDistance = float.MaxValue;
             float reachMaxSquared = armComponent.maxReachLength * armComponent.maxReachLength; 
             Entity closestRock = Entity.Null;
+
+            float time = worldTime + armComponent.timeOffset;
+            armComponent.idleHandTarget = translation.Value+new float3(Mathf.Sin(time)*.35f,1f+Mathf.Cos(time*1.618f)*.5f,1.5f);
+            armComponent.handTarget = armComponent.idleHandTarget;
 
             for (int i = 0; i < chunks.Length; i++)
             {
@@ -96,7 +163,7 @@ public class IdleArmSystem : JobComponentSystem
 
             if (closestRock != Entity.Null)
             {
-                ecb.RemoveComponent<ConvoyorComponent>(index, closestRock);
+                ecb.RemoveComponent<ConveyorComponent>(index, closestRock);
                 ecb.AddComponent(index, closestRock, new ReservedTag());
                 
                 ecb.RemoveComponent<ArmIdleTag>(index, armEntity);
@@ -113,7 +180,7 @@ public class IdleArmSystem : JobComponentSystem
         var queryDescription = new EntityQueryDesc
         {
             None = new ComponentType[] {ComponentType.ReadOnly<ReservedTag>()},
-            All = new ComponentType[] { ComponentType.ReadOnly<ConvoyorComponent>() , ComponentType.ReadOnly<Translation>(), }
+            All = new ComponentType[] { ComponentType.ReadOnly<RockComponent>() , ComponentType.ReadOnly<Translation>(), }
         };
         query = GetEntityQuery(queryDescription);
         ecbSystem =  World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
@@ -126,7 +193,8 @@ public class IdleArmSystem : JobComponentSystem
               chunks = query.CreateArchetypeChunkArray(Allocator.TempJob),
               translationType = GetArchetypeChunkComponentType<Translation>(),
               entityType = GetArchetypeChunkEntityType(),
-              ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
+              ecb = ecbSystem.CreateCommandBuffer().ToConcurrent(),
+              worldTime = Time.time
           }
           .Schedule(this, inputDeps);
       ecbSystem.AddJobHandleForProducer(handle);
@@ -150,7 +218,6 @@ public class ReachingArmSystem : JobComponentSystem
         [ReadOnly] public ComponentDataFromEntity<Translation> translationsFromEntity;
         [ReadOnly] public ComponentDataFromEntity<NonUniformScale> scalesFromEntity;
         public EntityCommandBuffer.Concurrent ecb;
-
         [ReadOnly] public float deltaTime;
         
         public void Execute(Entity armEntity, int index, [ReadOnly] ref ArmReachingTag tag, ref ArmComponent armComponent, [ReadOnly] ref Translation translation)
@@ -161,7 +228,6 @@ public class ReachingArmSystem : JobComponentSystem
             
             
             float3 delta = intendedRockTranslation.Value - translation.Value;
-            //Debug.Log("RJ delta:"+delta+" from rock at:"+intendedRockTranslation.Value);
 
             if (math.lengthsq(delta) < armComponent.maxReachLength * armComponent.maxReachLength)
             {
@@ -183,15 +249,13 @@ public class ReachingArmSystem : JobComponentSystem
                 {
                     // We've arrived at the rock
                     ecb.AddComponent(index, intendedRock, new RockHeldComponent());
-                    ecb.RemoveComponent<ConvoyorComponent>(index, intendedRock);
+                    ecb.RemoveComponent<ConveyorComponent>(index, intendedRock);
                     ecb.RemoveComponent<ArmReachingTag>(index, armEntity);
                     ecb.AddComponent(index, armEntity, new ArmHoldingTag());
                     
-                    // random minimum delay before starting the windup
-                    armComponent.windupTimer = UnityEngine.Random.Range(-1f,0f);
+                    armComponent.windupTimer = -.5f;
                     armComponent.throwTimer = 0f;
                     armComponent.heldRock = intendedRock;
-                    
                     armComponent.heldRockOffset = armComponent.handMatrix.inverse.MultiplyPoint3x4(intendedRockTranslation.Value);
                 }
                 else
@@ -239,47 +303,102 @@ public class ReachingArmSystem : JobComponentSystem
     }
 }
 
-
+[AlwaysUpdateSystem]
 public class HoldingArmSystem : JobComponentSystem
 {
     public BeginInitializationEntityCommandBufferSystem ecbSystem;
     public ComponentDataFromEntity<RockHeldComponent> rockHeldCompTypeFromEntity;
-
+    public EntityQueryDesc queryDescription;
+    public EntityQuery query;
     
     struct HoldingArmJob : IJobForEachWithEntity<ArmHoldingTag, ArmComponent, Translation>
     {
         [ReadOnly] public ComponentDataFromEntity<RockHeldComponent> rockHeldCompsFromEntity;
+        [DeallocateOnJobCompletion]
+        public NativeArray<ArchetypeChunk> chunks;
+        
+        [ReadOnly]
+        public ArchetypeChunkComponentType<Translation> translationType;
+        [ReadOnly]
+        public ArchetypeChunkEntityType entityType;
+  //      [ReadOnly]
+   //     public ArchetypeChunkComponentType<RigidBodyComponent> rigidBodyType;
 
         public float deltaTime;
         public EntityCommandBuffer.Concurrent ecb;
         
         public void Execute(Entity entity, int index, [ReadOnly] ref ArmHoldingTag tag, ref ArmComponent armComponent, [ReadOnly] ref Translation translation)
         {
+            float tmpDistance = float.MaxValue;
+            float range = 50.0f;
+            float maxThrowRange = range * range;
+            Entity closestCan = Entity.Null;
 
             armComponent.reachingTimer -= deltaTime / armComponent.reachDuration;
 
             if (armComponent.targetCan == Entity.Null)
             {
-                // Find a target can to fire at.
+                // Find nearest target can to fire at.
+                for (int i = 0; i < chunks.Length; i++)
+                {
+                    var canTranslations = chunks[i].GetNativeArray(translationType);
+                    var canEntities = chunks[i].GetNativeArray(entityType);
+                
+                    for (int j = 0; j < canTranslations.Length; j++)
+                    {
+                        Translation canTrans = canTranslations[j];
+                        Entity rockEntitiy = canEntities[j];
+                    
+                        float distSq = math.distancesq(translation.Value, canTrans.Value);
+                        if ((distSq < maxThrowRange) && (distSq < tmpDistance))
+                        {
+                            tmpDistance = distSq;
+                            closestCan = rockEntitiy;
+                        }
+                    }
+                }
+                
+                if (closestCan != Entity.Null)
+                {
+                    Debug.Log("RJ setting can target:"+closestCan.Index);
+                    armComponent.targetCan = closestCan;
+                }
+                else
+                {
+                    Debug.Log("RJ no can in range.");
+                }
+            }
+            else
+            {
+                Debug.Log("RJ we have target can entity:"+armComponent.targetCan.Index);
             }
 
             if (armComponent.targetCan != Entity.Null)
             {
                 ecb.AddComponent(index, armComponent.targetCan, new ReservedTag());
-                armComponent.windupTimer += deltaTime / armComponent.windupDuration;
                 ecb.RemoveComponent<ArmHoldingTag>(index, entity);
                 ecb.AddComponent(index, entity, new ArmThrowingTag());
             }
-            
-            //Hand matrix is set in the animation system, here we tell the rock where we want it to reposition.
-            RockHeldComponent heldComponent = rockHeldCompsFromEntity[armComponent.heldRock];
-            heldComponent.rockInHandPosition = armComponent.handMatrix.MultiplyPoint3x4(armComponent.heldRockOffset);
-            
+
+            if (armComponent.heldRock != Entity.Null)
+            {
+                //Hand matrix is set in the animation system, here we tell the rock where we want it to reposition.
+                RockHeldComponent heldComponent = rockHeldCompsFromEntity[armComponent.heldRock];
+                heldComponent.rockInHandPosition =
+                    armComponent.handMatrix.MultiplyPoint3x4(armComponent.heldRockOffset);
+            }
+
         }
     }
 
     protected override void OnCreate()
     {
+        var queryDescription = new EntityQueryDesc
+        {
+            None = new ComponentType[] {ComponentType.ReadOnly<ReservedTag>()},
+            All = new ComponentType[] { ComponentType.ReadOnly<TinCanComponent>() , ComponentType.ReadOnly<Translation>()}
+        };
+        query = GetEntityQuery(queryDescription);
         ecbSystem =  World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
     }
     
@@ -291,7 +410,11 @@ public class HoldingArmSystem : JobComponentSystem
         {
             rockHeldCompsFromEntity = rockHeldCompTypeFromEntity,
             deltaTime = Time.deltaTime,
-            ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
+            ecb = ecbSystem.CreateCommandBuffer().ToConcurrent(),
+            chunks = query.CreateArchetypeChunkArray(Allocator.TempJob),
+            translationType = GetArchetypeChunkComponentType<Translation>(),
+//            rigidBodyType = GetArchetypeChunkComponentType<RigidBodyComponent>(),
+            entityType = GetArchetypeChunkEntityType(),
         };
         var handle = job.Schedule(this, inputDeps);
         ecbSystem.AddJobHandleForProducer(handle);
@@ -302,21 +425,26 @@ public class HoldingArmSystem : JobComponentSystem
 public class ThrowingArmSystem : JobComponentSystem
 {
     public ComponentDataFromEntity<Translation> translationTypeFromEntity;
-    public BeginInitializationEntityCommandBufferSystem ecbSystem;
+    public ComponentDataFromEntity<RigidBodyComponent> rigidBodyTypeFromEntity;
+    public EndInitializationEntityCommandBufferSystem ecbSystem;
 
     struct ThrowingArmJob : IJobForEachWithEntity<ArmThrowingTag, ArmComponent, Translation>
     {
         [ReadOnly] public ComponentDataFromEntity<Translation> translationsFromEntity;
+        [ReadOnly] public ComponentDataFromEntity<RigidBodyComponent> rigidBodyFromEntity;
         public float deltaTime;
         public EntityCommandBuffer.Concurrent ecb;
 
         public void Execute(Entity entity, int index, [ReadOnly] ref ArmThrowingTag tag, ref ArmComponent armComponent, [ReadOnly] ref Translation translation)
         {
+            armComponent.windupTimer += deltaTime / armComponent.windupDuration;
+            Debug.Log("RJ ThrowingArmJob: using target can:"+armComponent.targetCan.Index);
+            RigidBodyComponent targetCanRigidBody = rigidBodyFromEntity[armComponent.targetCan];
+            Translation targetCanTranslation = translationsFromEntity[armComponent.targetCan];
+
             if (armComponent.windupTimer < 1f)
             {
-                Translation targetCanTranslation = translationsFromEntity[armComponent.targetCan];
 
-                
                 // still winding up...
                 float windupT = Mathf.Clamp01(armComponent.windupTimer) - Mathf.Clamp01(armComponent.throwTimer * 2f);
                 windupT = 3f * windupT * windupT - 2f * windupT * windupT * windupT;
@@ -335,36 +463,31 @@ public class ThrowingArmSystem : JobComponentSystem
                 armComponent.throwTimer += deltaTime / armComponent.throwDuration;
 
                 // update our aim until we release the rock
-                if (armComponent.heldRock != null) {
-                    //TODO calculate aim vector.
-                    //aimVector = AimAtCan(targetCan,lastIntendedRockPos);
-                }
+                //if (armComponent.heldRock != Entity.Null)
+                //{
+                armComponent.aimVector = util.AimAtCan(targetCanRigidBody.Velocity,targetCanTranslation.Value, translation.Value, targetCanRigidBody.Gravity);
+                //}
 
                 // we start this animation in our windup position,
                 // and end it by returning to our default idle pose
-                Vector3 restingPos = Vector3.Lerp(armComponent.windupHandTarget,armComponent.handTarget, armComponent.throwTimer);
+                float3 restingPos = math.lerp(armComponent.windupHandTarget,armComponent.handTarget, armComponent.throwTimer);
 
                 // find the hand's target position to perform the throw
                 // (somewhere forward and upward from the windup position)
-                Vector3 throwHandTarget = armComponent.windupHandTarget + (math.normalize(armComponent.aimVector) * 2.5f);
-
-                armComponent.handTarget = Vector3.LerpUnclamped(restingPos,throwHandTarget,
-                    util.GetGlobalData().armThrowingCurve.Evaluate(armComponent.throwTimer));
-
-                if (armComponent.throwTimer > .15f && armComponent.heldRock != null) {
+                float3 throwHandTarget = armComponent.windupHandTarget + (math.normalize(armComponent.aimVector) * 2.5f);
+                float lerpAmount = util.GetGlobalData().armThrowingCurve.Evaluate(armComponent.throwTimer);
+                armComponent.handTarget = math.lerp(restingPos,throwHandTarget, lerpAmount);
+                
+                if (armComponent.throwTimer > .15f && armComponent.heldRock != Entity.Null) {
+                    // release the rock
+                    Debug.Log("RJ releasing the rock:"+armComponent.heldRock.Index);
                     ecb.RemoveComponent<RockHeldComponent>(index, armComponent.heldRock);
-
-                    var rockThrownComp = new RockThownComponent()
+                    var rockThrownComp = new RockThrownComponent
                     {
-                        //TODO set aim vector;
+                        Velocity = armComponent.aimVector
                     };
                     ecb.AddComponent(index, armComponent.heldRock, rockThrownComp);
-
-                    // release the rock
-                    //heldRock.reserved = false;
-                    //heldRock.state = Rock.State.Thrown;
-                    //heldRock.velocity = aimVector;
-                    //heldRock = null;
+                    armComponent.heldRock = Entity.Null;
                 }
 
                 if (armComponent.throwTimer >= 1f) {
@@ -372,22 +495,27 @@ public class ThrowingArmSystem : JobComponentSystem
                     armComponent.windupTimer = 0f;
                     armComponent.throwTimer = 0f;
                     armComponent.targetCan = Entity.Null;
+                    
+                    ecb.RemoveComponent<ArmThrowingTag>(index, entity);
+                    ecb.AddComponent(index, entity, new ArmIdleTag());
                 }
             }
         }
     }
     protected override void OnCreate()
     {
-        ecbSystem =  World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+        ecbSystem =  World.GetOrCreateSystem<EndInitializationEntityCommandBufferSystem>();
     }
     
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         translationTypeFromEntity = GetComponentDataFromEntity<Translation>(true);
+        rigidBodyTypeFromEntity = GetComponentDataFromEntity<RigidBodyComponent>(true);
 
         var job = new ThrowingArmJob()
         {
             translationsFromEntity = translationTypeFromEntity,
+            rigidBodyFromEntity = rigidBodyTypeFromEntity,
             deltaTime = Time.deltaTime,
             ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
         };
@@ -432,14 +560,12 @@ public static class FABRIK {
 }
 public class ArmAnimationSystem : JobComponentSystem
 {
-    private Mesh mesh;
-    private Material material;
-    private AnimationCurve throwingCurve;
-    
+    public static AnimationCurve throwCurve;
     
     struct ArmAnimationJob : IJobForEachWithEntity<ArmComponent, Translation, Rotation>
     {
         public float worldTime;
+        
        // [ReadOnly]
         [NativeDisableParallelForRestriction]
         public BufferFromEntity<ArmMatrixBuffer> matrixBufferLookup;
@@ -447,12 +573,7 @@ public class ArmAnimationSystem : JobComponentSystem
         public void Execute(Entity entity, int index, ref ArmComponent armComponent, 
             [ReadOnly] ref Translation translation, [ReadOnly] ref Rotation rotation)
         {
-            if (!util.GetGlobalData())
-            {
-                Debug.LogError("We don't have global data!");
-                return;
-            }
-
+            
             //TODO do these chains need to be saved in the arm component so that they keep their position in between animations?
             float3[] armChain;
             float3[][] fingerChains;
@@ -483,7 +604,6 @@ public class ArmAnimationSystem : JobComponentSystem
             
             // Resting position for hand
             float time = worldTime + armComponent.timeOffset;
-            armComponent.idleHandTarget = translation.Value+new float3(Mathf.Sin(time)*.35f,1f+Mathf.Cos(time*1.618f)*.5f,1.5f);
             
             // solve the arm IK chain first
             FABRIK.Solve(armChain,armBoneLength, translation.Value, armComponent.handTarget,handUp*armBendStrength);
@@ -514,7 +634,7 @@ public class ArmAnimationSystem : JobComponentSystem
             // next:  fingers
             float3 handPos = util.Last(armChain, 0);
             // fingers spread out during a throw
-            float openPalm = util.GetGlobalData().armThrowingCurve.Evaluate(armComponent.throwTimer);
+            float openPalm = throwCurve.Evaluate(armComponent.throwTimer);
             
             //TODO add these to arm component?
             float fingerXOffset = -0.12f;
@@ -584,10 +704,20 @@ public class ArmAnimationSystem : JobComponentSystem
     
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
+        GlobalData gd = util.GetGlobalData();
+        if (!gd)
+        {
+            Debug.LogError("NO GLOBAL DATA");
+        }
+        else
+        {
+            throwCurve = gd.armThrowingCurve;
+        }
+        
         var job = new ArmAnimationJob()
         {
             worldTime = Time.time,
-            matrixBufferLookup = GetBufferFromEntity<ArmMatrixBuffer>()
+            matrixBufferLookup = GetBufferFromEntity<ArmMatrixBuffer>(),
         };
         var handle = job.Schedule(this, inputDeps);
         return handle;
