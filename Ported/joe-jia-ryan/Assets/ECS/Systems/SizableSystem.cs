@@ -20,6 +20,8 @@ public class SizableSystem : JobComponentSystem
             (Entity e, ref Scale scale, ref SizeableComponent sizable) => 
             {
                 sizable.CurrentSize += (sizable.TargetSize - sizable.CurrentSize) * sizable.ScaleFactor * deltaTime;
+                if (sizable.TargetSize - sizable.CurrentSize < 0.01f)
+                    sizable.CurrentSize = sizable.TargetSize;
                 scale.Value = sizable.CurrentSize;
             })
             .Schedule(inputDeps);

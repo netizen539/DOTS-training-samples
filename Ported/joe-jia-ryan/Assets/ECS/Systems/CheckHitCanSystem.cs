@@ -37,9 +37,10 @@ public class CheckHitCanSystem : JobComponentSystem
             while (index < tinCansArray.Length)
             {
                 Translation tcpos = tinCanPositionsArray[index];
-                if (math.distance(pos.Value, tcpos.Value) < 1f)
+                if (math.distance(pos.Value, tcpos.Value) < 0.25f)
                 {
                     var tce = tinCansArray[index];
+                    ecb.RemoveComponent<ConveyorComponent>(entityInQueryIndex, tce);
                     ecb.AddComponent(entityInQueryIndex, tce, new InFlightTag());
 
                     Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)index + 1);
