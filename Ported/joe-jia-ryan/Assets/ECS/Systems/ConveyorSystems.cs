@@ -8,12 +8,12 @@ using static Unity.Mathematics.math;
 
 public class ConveyorSystems : JobComponentSystem
 {
-    BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
+    BeginSimulationEntityCommandBufferSystem m_EntityCommandBufferSystem;
 
     protected override void OnCreate()
     {
         base.OnCreate();
-        m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginInitializationEntityCommandBufferSystem>();
+        m_EntityCommandBufferSystem = World.GetOrCreateSystem<BeginSimulationEntityCommandBufferSystem>();
     }
 
     [BurstCompile]

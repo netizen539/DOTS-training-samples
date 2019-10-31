@@ -28,12 +28,13 @@ public class ResetSystem : JobComponentSystem
         var right = new float3(1.0f, 0f, 0f);
 
         var jobHandle = Entities
-        .WithName("RockThrowSystem")
+        .WithName("RockResetSystem")
         .WithAll<RockComponent, ResetTag>()
         .WithDeallocateOnJobCompletion(throwingArmsComponentArray)
         .WithDeallocateOnJobCompletion(rockComponentArray)
+        .WithoutBurst()
         .ForEach(
-            (int entityInQueryIndex, Entity e, ref Scale scale, ref Translation pos, ref SizeableComponent sc) => 
+            (int entityInQueryIndex, Entity e, ref Scale scale, ref Translation pos, ref SizeableComponent sc, ref RigidBodyComponent rbc) => 
             {
 
                 var tac = throwingArmsComponentArray[0];
@@ -41,11 +42,12 @@ public class ResetSystem : JobComponentSystem
 
                 sc.CurrentSize = 0;
                 scale.Value = 0;
-                var minConveyorX = -tac.ConveyorMargin;
-                var maxConveyorX = tac.ConveyorWidth + tac.ConveyorMargin;
-                pos.Value = new float3(rnd.NextFloat(minConveyorX, maxConveyorX),0f,1.5f);
+                var minConveyorX = tac.ConveyorMinX;
+                var maxConveyorX = tac.ConveyorMaxX;
+                pos.Value = new float3(minConveyorX,0f,1.5f);
 
-                ecb.RemoveComponent<ResetTag>(entityInQueryIndex, e);
+                ecb.RemoveComponent<InFlightTag>(entityInQueryIndex, e);
+
                 ecb.AddComponent(entityInQueryIndex, e, new ConveyorComponent
                 {
                     Speed = tac.ConveyorSpeed,
@@ -53,6 +55,9 @@ public class ResetSystem : JobComponentSystem
                     ResetX = minConveyorX,
                     MaxX = maxConveyorX
                 });
+
+                rbc.Velocity = new float3(0f,0f,0f);
+                ecb.RemoveComponent<ResetTag>(entityInQueryIndex, e);
             })
             .Schedule(inputDeps);
         

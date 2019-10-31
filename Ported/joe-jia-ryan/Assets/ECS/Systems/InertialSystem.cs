@@ -16,8 +16,8 @@ public class InertialSystem : JobComponentSystem
         var jobHandle = inputDeps;
 
         jobHandle = Entities
-        .WithName("RockThrowSystem")
-        .WithAll<RockComponent>()
+        .WithName("InertialSystem")
+        .WithAll<RockComponent, InFlightTag>()
         .ForEach(
             (int entityInQueryIndex, Entity e, ref RigidBodyComponent rbc, ref Translation pos, ref Rotation rot) => 
             {

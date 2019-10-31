@@ -7,6 +7,7 @@ using Unity.Collections;
 
 public class RandomRockStateTransitionSystem : JobComponentSystem
 {
+    int count = 0;
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         var ecbs = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
@@ -15,6 +16,8 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
         rnd.InitState();
         
         var jobHandle = inputDeps;
+        int c = count;
+        count++;
 
         jobHandle = Entities
         .WithName("MoveConveyorToHeld")
@@ -22,11 +25,11 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
         .ForEach(
             (int entityInQueryIndex, Entity e) => 
             {
-                float val = rnd.NextFloat(0f, 1f);
-                if (val > 0.95f)
+                int val = rnd.NextInt(0, 1000);
+                if (c % 1000 == val)
                 {
                     ecb.RemoveComponent<ConveyorComponent>(entityInQueryIndex, e);
-                    ecb.AddComponent(entityInQueryIndex, e, new RockHeldComponent{Velocity = new float3(0f,0f,-1.0f)});
+                    ecb.AddComponent(entityInQueryIndex, e, new RockHeldComponent{Velocity = new float3(0f,0f,-10f)});
                 }
             })
             .Schedule(jobHandle);
@@ -38,43 +41,8 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
         .ForEach(
             (int entityInQueryIndex, Entity e) => 
             {
-                float val = rnd.NextFloat(0f, 1f);
-                if (val > 0.9f)
-                {
-                    ecb.RemoveComponent<RockHeldComponent>(entityInQueryIndex, e);
-                    ecb.AddComponent(entityInQueryIndex, e, new RockThrownComponent{ Velocity = new float3(0f, 2f, 2f)});
-                }
-            })
-            .Schedule(jobHandle);
-
-        // jobHandle = Entities
-        // .WithName("MoveThrownToInFlight")
-        // .WithAll<RockComponent>()
-        // .ForEach(
-        //     (int entityInQueryIndex, Entity e, ref RockThrownComponent rtc, ref RigidBodyComponent rbc) => 
-        //     {
-        //         float val = rnd.NextFloat(0f, 1f);
-        //         if (val > 0.5f)
-        //         {
-        //             ecb.RemoveComponent<RockThrownComponent>(entityInQueryIndex, e);
-        //             rbc.Velocity = rtc.Velocity;
-        //             ecb.AddComponent(entityInQueryIndex, e, new InFlightTag());
-        //         }
-        //     })
-        //     .Schedule(jobHandle);
-
-        jobHandle = Entities
-        .WithName("MoveInFlightToReset")
-        .WithAll<RockComponent, InFlightTag>()
-        .ForEach(
-            (int entityInQueryIndex, Entity e) => 
-            {
-                float val = rnd.NextFloat(0f, 1f);
-                if (val > 0.5f)
-                {
-                    ecb.RemoveComponent<InFlightTag>(entityInQueryIndex, e);
-                    ecb.AddComponent(entityInQueryIndex, e, new ResetTag());
-                }
+                ecb.RemoveComponent<RockHeldComponent>(entityInQueryIndex, e);
+                ecb.AddComponent(entityInQueryIndex, e, new RockThrownComponent{ Velocity = new float3(0f, rnd.NextFloat(5f, 20f), rnd.NextFloat(10f, 40f))});
             })
             .Schedule(jobHandle);
 
