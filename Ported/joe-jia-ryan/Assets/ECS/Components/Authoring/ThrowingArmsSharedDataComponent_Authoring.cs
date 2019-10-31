@@ -22,15 +22,15 @@ public class ThrowingArmsSharedDataComponent_Authoring : MonoBehaviour, IConvert
         };
         dstManager.AddComponentData(entity, spawn);
 
-        float conveyorWidth = this.ArmCount * this.ArmWidth;
+        float conveyorWidth = (2.0f * this.ConveyorMargin) + this.ArmCount * this.ArmWidth;
         var data = new ThrowingArmsSharedDataComponent
         {
             ArmCount = this.ArmCount,
             ArmWidth = this.ArmWidth,
             ConveyorMargin = this.ConveyorMargin,
             ConveyorWidth = conveyorWidth,
-            ConveyorMaxX = 0,
-            ConveyorMinX = conveyorWidth + this.ConveyorMargin,
+            ConveyorMaxX = conveyorWidth + this.ConveyorMargin,
+            ConveyorMinX = -this.ConveyorMargin,
             ConveyorSpeed = this.ConveyorSpeed,
         };
 

@@ -27,7 +27,7 @@ public class ConveyorSystems : JobComponentSystem
             rigidBody.Velocity = conveyor.Direction * conveyor.Speed;
             translation.Value += rigidBody.Velocity * DeltaTime;
 
-            if (translation.Value.x * conveyor.Direction.x > conveyor.MaxX + 5f)
+            if (translation.Value.x * conveyor.Direction.x > conveyor.MaxX)
             {
                 CommandBuffer.RemoveComponent<ConveyorComponent>(index, e);
                 CommandBuffer.AddComponent(index, e, new ResetTag());

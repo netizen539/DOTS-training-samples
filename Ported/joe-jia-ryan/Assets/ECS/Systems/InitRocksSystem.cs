@@ -43,10 +43,9 @@ public class InitRocksSystem : JobComponentSystem
                     ScaleFactor = rc.SizeGrowthFactor,
                 });                
 
-                var minConveyorX = -tac.ConveyorMargin;
-                var maxConveyorX = tac.ConveyorWidth + tac.ConveyorMargin;
-
-                float spacing = (maxConveyorX - minConveyorX) / (float)tac.ArmCount;
+                var minConveyorX = tac.ConveyorMinX;
+                var maxConveyorX = tac.ConveyorMaxX;
+                float spacing = ((float)maxConveyorX - (float)minConveyorX) / (float)math.max((tac.ArmCount - 1), 1);
                 float3 basePos = new float3(minConveyorX,0f,1.5f);
 
                 pos.Value = basePos + right * spacing * entityInQueryIndex;
