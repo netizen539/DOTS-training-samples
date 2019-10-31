@@ -26,13 +26,7 @@ public class InertialSystem : JobComponentSystem
                 pos.Value += rbc.Velocity * deltaTime;
 				rbc.Velocity -= Up * rbc.Gravity * deltaTime;
                 quaternion rotation = math.mul(quaternion.AxisAngle(rbc.AngularVelocity, math.length(rbc.AngularVelocity) * deltaTime), rot.Value);
-                rotation = rotation.value % (math.PI * 2f);
-                rot.Value = rotation;
-                //         if (math.isnan(rot.Value.value.x))
-                //         {
-                //             Unity.Mathematics.Random rand = new Unity.Mathematics.Random((uint)entityInQueryIndex + 1);
-                //             rbc.AngularVelocity = math.radians(math.normalize(rand.NextFloat3()) * math.length(rbc.Velocity) * 40f);
-                //         }
+                rot.Value = math.normalize(rotation);
 
             })
             .Schedule(jobHandle);
