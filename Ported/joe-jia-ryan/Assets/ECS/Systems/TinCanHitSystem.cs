@@ -6,8 +6,8 @@ using Unity.Jobs;
 using Unity.Collections;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(RockHeldSystem))]
-public class RockThrownSystem : JobComponentSystem
+[UpdateAfter(typeof(CheckHitCanSystem))]
+public class TinCanHitSystem : JobComponentSystem
 {
 
     protected override JobHandle OnUpdate(JobHandle inputDeps)
@@ -16,13 +16,13 @@ public class RockThrownSystem : JobComponentSystem
         var ecb = ecbs.CreateCommandBuffer().ToConcurrent();
 
         var jobHandle = Entities
-        .WithName("RockThrownSystem")
+        .WithName("CheckAndResetSystem")
+        .WithAll<TinCanComponent, TinCanHitTag>()
         .ForEach(
-            (int entityInQueryIndex, Entity e, ref RockThrownComponent rhc, ref RigidBodyComponent rbc) => 
+            (int entityInQueryIndex, Entity e) => 
             {
-                rbc.Velocity = rhc.Velocity;
-                ecb.AddComponent(entityInQueryIndex, e, new InFlightTag());
-                ecb.RemoveComponent<RockThrownComponent>(entityInQueryIndex, e);
+                ecb.RemoveComponent<TinCanHitTag>(entityInQueryIndex, e);
+                ecb.AddComponent(entityInQueryIndex, e, new ResetTag());
             })
             .Schedule(inputDeps);
         

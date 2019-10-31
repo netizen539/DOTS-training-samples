@@ -5,6 +5,8 @@ using UnityEngine;
 using Unity.Jobs;
 using Unity.Collections;
 
+[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(RockResetSystem))]
 public class RandomRockStateTransitionSystem : JobComponentSystem
 {
     int count = 0;
@@ -23,13 +25,16 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
         .WithName("MoveConveyorToHeld")
         .WithAll<RockComponent, ConveyorComponent>()
         .ForEach(
-            (int entityInQueryIndex, Entity e) => 
+            (int entityInQueryIndex, Entity e, in ref Translation pos) => 
             {
-                int val = rnd.NextInt(0, 1000);
-                if (c % 1000 == val)
-                {
-                    ecb.RemoveComponent<ConveyorComponent>(entityInQueryIndex, e);
-                    ecb.AddComponent(entityInQueryIndex, e, new RockHeldComponent{Velocity = new float3(0f,0f,-10f)});
+                if (pos.Value.x >= 10f)
+                {                    
+                    int val = rnd.NextInt(0, 997);
+                    if (c % 991 == val)
+                    {
+                        ecb.RemoveComponent<ConveyorComponent>(entityInQueryIndex, e);
+                        ecb.AddComponent(entityInQueryIndex, e, new RockHeldComponent{Velocity = new float3(0f,2f,-2f)});
+                    }
                 }
             })
             .Schedule(jobHandle);
@@ -39,10 +44,13 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
         .WithName("MoveHeldToThrown")
         .WithAll<RockComponent, RockHeldComponent>()
         .ForEach(
-            (int entityInQueryIndex, Entity e) => 
+            (int entityInQueryIndex, Entity e, in ref Translation pos) => 
             {
-                ecb.RemoveComponent<RockHeldComponent>(entityInQueryIndex, e);
-                ecb.AddComponent(entityInQueryIndex, e, new RockThrownComponent{ Velocity = new float3(0f, rnd.NextFloat(5f, 20f), rnd.NextFloat(10f, 40f))});
+                if (pos.Value.y > 1.5f)
+                {
+                    ecb.RemoveComponent<RockHeldComponent>(entityInQueryIndex, e);
+                    ecb.AddComponent(entityInQueryIndex, e, new RockThrownComponent{ Velocity = new float3(0f, rnd.NextFloat(5f, 20f), rnd.NextFloat(10f, 40f))});
+                }
             })
             .Schedule(jobHandle);
 

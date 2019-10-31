@@ -376,7 +376,7 @@ MonoBehaviour:
     type: 3}
   TinCanPrefab: {fileID: 1062600091147575846, guid: 375668c8eb9a44c45930795beef1b71a,
     type: 3}
-  ArmCount: 1000
+  ArmCount: 10000
   ArmWidth: 1
   ConveyorMargin: 10
   ConveyorSpeed: 5

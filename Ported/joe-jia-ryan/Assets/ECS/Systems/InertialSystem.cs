@@ -4,6 +4,8 @@ using Unity.Transforms;
 using Unity.Jobs;
 using Unity.Collections;
 
+[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(RockThrownSystem))]
 public class InertialSystem : JobComponentSystem
 {
     protected override JobHandle OnUpdate(JobHandle inputDeps)
@@ -17,7 +19,7 @@ public class InertialSystem : JobComponentSystem
 
         jobHandle = Entities
         .WithName("InertialSystem")
-        .WithAll<RockComponent, InFlightTag>()
+        .WithAll<InFlightTag>()
         .ForEach(
             (int entityInQueryIndex, Entity e, ref RigidBodyComponent rbc, ref Translation pos, ref Rotation rot) => 
             {

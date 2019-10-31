@@ -5,7 +5,9 @@ using UnityEngine;
 using Unity.Jobs;
 using Unity.Collections;
 
-public class ResetSystem : JobComponentSystem
+[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(CheckAndResetSystem))]
+public class RockResetSystem : JobComponentSystem
 {
     uint frameCount = 0;
     EntityQuery m_InitDataQuery;
@@ -32,7 +34,6 @@ public class ResetSystem : JobComponentSystem
         .WithAll<RockComponent, ResetTag>()
         .WithDeallocateOnJobCompletion(throwingArmsComponentArray)
         .WithDeallocateOnJobCompletion(rockComponentArray)
-        .WithoutBurst()
         .ForEach(
             (int entityInQueryIndex, Entity e, ref Scale scale, ref Translation pos, ref SizeableComponent sc, ref RigidBodyComponent rbc) => 
             {
