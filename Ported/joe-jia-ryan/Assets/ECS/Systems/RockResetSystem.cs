@@ -5,7 +5,9 @@ using UnityEngine;
 using Unity.Jobs;
 using Unity.Collections;
 
-public class ResetSystem : JobComponentSystem
+[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(CheckAndResetSystem))]
+public class RockResetSystem : JobComponentSystem
 {
     uint frameCount = 0;
     EntityQuery m_InitDataQuery;
@@ -32,7 +34,6 @@ public class ResetSystem : JobComponentSystem
         .WithAll<RockComponent, ResetTag>()
         .WithDeallocateOnJobCompletion(throwingArmsComponentArray)
         .WithDeallocateOnJobCompletion(rockComponentArray)
-        .WithoutBurst()
         .ForEach(
             (int entityInQueryIndex, Entity e, ref Scale scale, ref Translation pos, ref SizeableComponent sc, ref RigidBodyComponent rbc) => 
             {
@@ -47,7 +48,7 @@ public class ResetSystem : JobComponentSystem
                 pos.Value = new float3(minConveyorX,0f,1.5f);
 
                 ecb.RemoveComponent<InFlightTag>(entityInQueryIndex, e);
-
+                ecb.RemoveComponent<ReservedTag>(entityInQueryIndex, e);
                 ecb.AddComponent(entityInQueryIndex, e, new ConveyorComponent
                 {
                     Speed = tac.ConveyorSpeed,

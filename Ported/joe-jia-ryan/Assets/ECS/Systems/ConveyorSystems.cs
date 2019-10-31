@@ -6,6 +6,8 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using static Unity.Mathematics.math;
 
+[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(InitRocksSystem))]
 public class ConveyorSystems : JobComponentSystem
 {
     BeginSimulationEntityCommandBufferSystem m_EntityCommandBufferSystem;

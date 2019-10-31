@@ -5,6 +5,8 @@ using UnityEngine;
 using Unity.Jobs;
 using Unity.Collections;
 
+[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(ConveyorSystems))]
 public class RockHeldSystem : JobComponentSystem
 {
     protected override JobHandle OnUpdate(JobHandle inputDeps)

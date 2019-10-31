@@ -6,7 +6,10 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-public class TinCanInitSystem : JobComponentSystem
+[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(CheckAndResetSystem))]
+public class TinCanResetSystem : JobComponentSystem
+
 {
     BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
     EntityQuery m_ArmDataQuery;
@@ -160,13 +163,18 @@ public class TinCanHitSystem : JobComponentSystem
     }
 }
 
-
-
 /*[UpdateInGroup(typeof(SimulationSystemGroup))]
 public class TinCanSpawnSystem : JobComponentSystem
 {
     BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
 
+=======
+/*[UpdateInGroup(typeof(SimulationSystemGroup))]
+public class TinCanSpawnSystem : JobComponentSystem
+{
+    BeginInitializationEntityCommandBufferSystem m_EntityCommandBufferSystem;
+
+>>>>>>> master
     protected override void OnCreate()
     {
         base.OnCreate();

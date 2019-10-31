@@ -5,6 +5,8 @@ using UnityEngine;
 using Unity.Jobs;
 using Unity.Collections;
 
+[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(InertialSystem))]
 public class CheckAndResetSystem : JobComponentSystem
 {
 
