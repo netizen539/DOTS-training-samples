@@ -11,13 +11,9 @@ using quaternion = Unity.Mathematics.quaternion;
 
 public class directions
 {
-    [ReadOnly]
     public static float3 right = new float3(1,0,0);
-    [ReadOnly]
     public static float3 up = new float3(0,1,0);
-    [ReadOnly]
     public static float3 one = new float3(1,1,1);
-    [ReadOnly]
     public static float3 forward = new float3(0, 0, 1);
 }
 
@@ -132,10 +128,11 @@ public class IdleArmSystem : JobComponentSystem
         public EntityCommandBuffer.Concurrent ecb;
 
         public float worldTime;
+        public float3 right;
 
-        public void Execute(Entity armEntity, int index, [ReadOnly] ref ArmIdleTag tag, [ReadOnly] ref ArmComponent armComponent, [ReadOnly] ref Translation translation)
+        public void Execute(Entity armEntity, int index, [ReadOnly] ref ArmIdleTag tag, ref ArmComponent armComponent, [ReadOnly] ref Translation translation)
         {
-            float3 searchFromPos = translation.Value - directions.right * .5f;
+            float3 searchFromPos = translation.Value - right * .5f;
             float tmpDistance = float.MaxValue;
             float reachMaxSquared = armComponent.maxReachLength * armComponent.maxReachLength; 
             Entity closestRock = Entity.Null;
@@ -145,8 +142,10 @@ public class IdleArmSystem : JobComponentSystem
             armComponent.handTarget = armComponent.idleHandTarget;
 
             var rockEntities = EntitiesBucketedByIndex.GetValuesForKey(index);
-            foreach (Entity re in rockEntities)
+            rockEntities.Reset();
+            while (rockEntities.MoveNext())
             {
+                var re = rockEntities.Current;
                 Translation targetRockPos = translationsFromEntity[re];
                 float distSq = math.distancesq(searchFromPos, targetRockPos.Value);
                 if ((distSq < reachMaxSquared) && (distSq < tmpDistance))
@@ -189,7 +188,8 @@ public class IdleArmSystem : JobComponentSystem
                 translationsFromEntity = translationTypeFromEntity,
                 EntitiesBucketedByIndex = BucketSystems.EntitiesBucketedByIndex,
                 ecb = ecbSystem.CreateCommandBuffer().ToConcurrent(),
-                worldTime = Time.time
+                worldTime = Time.time,
+                right = new float3(1f,0f,0f),
           }
           .Schedule(this, inputDeps);
         World.GetOrCreateSystem<UnbucketSystems>().AddJobHandle(handle);
@@ -770,16 +770,16 @@ public class ArmAnimationSystemMainThread : ComponentSystem
         if (!util.GetGlobalData())
             return;
         
-        Entities.ForEach((Entity entity, ref ArmComponent armComponent) =>
-        {
-            DynamicBuffer<ArmMatrixBuffer> buffer = EntityManager.GetBuffer<ArmMatrixBuffer>(entity);
-            for (int i = 0; i < buffer.Length; i++)
-            {
-                matrices[i] = buffer[i].Value;
-            }
+        // Entities.ForEach((Entity entity, ref ArmComponent armComponent) =>
+        // {
+        //     DynamicBuffer<ArmMatrixBuffer> buffer = EntityManager.GetBuffer<ArmMatrixBuffer>(entity);
+        //     for (int i = 0; i < buffer.Length; i++)
+        //     {
+        //         matrices[i] = buffer[i].Value;
+        //     }
 
-           Graphics.DrawMeshInstanced(util.GetGlobalData().armMesh ,0, util.GetGlobalData().armMaterial, matrices);
-        });
+        //    Graphics.DrawMeshInstanced(util.GetGlobalData().armMesh ,0, util.GetGlobalData().armMaterial, matrices);
+        // });
     }
 }
 
