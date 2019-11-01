@@ -186,7 +186,7 @@ public class IdleArmSystem : JobComponentSystem
           var handle = new IdleArmJob()
           {
                 translationsFromEntity = translationTypeFromEntity,
-                EntitiesBucketedByIndex = BucketSystems.EntitiesBucketedByIndex,
+                EntitiesBucketedByIndex = BucketSystems.RockEntitiesBucketedByIndex,
                 ecb = ecbSystem.CreateCommandBuffer().ToConcurrent(),
                 worldTime = Time.time,
                 right = new float3(1f,0f,0f),
@@ -303,6 +303,7 @@ public class ReachingArmSystem : JobComponentSystem
 public class HoldingArmSystem : JobComponentSystem
 {
     public BeginInitializationEntityCommandBufferSystem ecbSystem;
+    public ComponentDataFromEntity<Translation> translationTypeFromEntity;
     public ComponentDataFromEntity<RockHeldComponent> rockHeldCompTypeFromEntity;
     public EntityQueryDesc queryDescription;
     public EntityQuery query;
@@ -310,9 +311,8 @@ public class HoldingArmSystem : JobComponentSystem
     struct HoldingArmJob : IJobForEachWithEntity<ArmHoldingTag, ArmComponent, Translation>
     {
         [ReadOnly] public ComponentDataFromEntity<RockHeldComponent> rockHeldCompsFromEntity;
-        [DeallocateOnJobCompletion] [ReadOnly] public NativeArray<ArchetypeChunk> chunks;
-        [ReadOnly] public ArchetypeChunkComponentType<Translation> translationType;
-        [ReadOnly] public ArchetypeChunkEntityType entityType;
+        [ReadOnly] public ComponentDataFromEntity<Translation> translationsFromEntity;
+        [ReadOnly] public NativeMultiHashMap<int, Entity> EntitiesBucketedByIndex;
         public float deltaTime;
         public EntityCommandBuffer.Concurrent ecb;
         
@@ -328,25 +328,20 @@ public class HoldingArmSystem : JobComponentSystem
             if (armComponent.targetCan == Entity.Null)
             {
                 // Find nearest target can to fire at.
-                for (int i = 0; i < chunks.Length; i++)
+                var targetEntities = EntitiesBucketedByIndex.GetValuesForKey(index);
+                targetEntities.Reset();
+                while (targetEntities.MoveNext())
                 {
-                    var canTranslations = chunks[i].GetNativeArray(translationType);
-                    var canEntities = chunks[i].GetNativeArray(entityType);
-                
-                    for (int j = 0; j < canTranslations.Length; j++)
+                    var te = targetEntities.Current;
+                    Translation targetPos = translationsFromEntity[te];
+                    float distSq = math.distancesq(translation.Value, targetPos.Value);
+                    if ((distSq < maxThrowRange) && (distSq < tmpDistance))
                     {
-                        Translation canTrans = canTranslations[j];
-                        Entity rockEntitiy = canEntities[j];
-                    
-                        float distSq = math.distancesq(translation.Value, canTrans.Value);
-                        if ((distSq < maxThrowRange) && (distSq < tmpDistance))
-                        {
-                            tmpDistance = distSq;
-                            closestCan = rockEntitiy;
-                        }
+                        tmpDistance = distSq;
+                        closestCan = te;
                     }
                 }
-                
+              
                 if (closestCan != Entity.Null)
                 {
                     armComponent.targetCan = closestCan;
@@ -385,18 +380,18 @@ public class HoldingArmSystem : JobComponentSystem
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
         rockHeldCompTypeFromEntity = GetComponentDataFromEntity<RockHeldComponent>(true);
+        translationTypeFromEntity = GetComponentDataFromEntity<Translation>(true);
 
         var job = new HoldingArmJob()
         {
+            translationsFromEntity = translationTypeFromEntity,
+            EntitiesBucketedByIndex = BucketSystems.TinCanEntitiesBucketedByIndex,
             rockHeldCompsFromEntity = rockHeldCompTypeFromEntity,
             deltaTime = Time.deltaTime,
             ecb = ecbSystem.CreateCommandBuffer().ToConcurrent(),
-            chunks = query.CreateArchetypeChunkArray(Allocator.TempJob),
-            translationType = GetArchetypeChunkComponentType<Translation>(),
-//            rigidBodyType = GetArchetypeChunkComponentType<RigidBodyComponent>(),
-            entityType = GetArchetypeChunkEntityType(),
         };
         var handle = job.Schedule(this, inputDeps);
+        World.GetOrCreateSystem<UnbucketSystems>().AddJobHandle(handle);
         ecbSystem.AddJobHandleForProducer(handle);
         return handle;
     }
@@ -499,7 +494,6 @@ public class ThrowingArmSystem : JobComponentSystem
             ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
         };
         var handle = job.Schedule(this, inputDeps);
-        World.GetOrCreateSystem<UnbucketSystems>().AddJobHandle(handle);
         ecbSystem.AddJobHandleForProducer(handle);
         return handle;
     }
