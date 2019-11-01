@@ -815,16 +815,16 @@ public class ArmAnimationSystemMainThread : ComponentSystem
         if (!util.GetGlobalData())
             return;
         
-        // Entities.ForEach((Entity entity, ref ArmComponent armComponent) =>
-        // {
-        //     DynamicBuffer<ArmMatrixBuffer> buffer = EntityManager.GetBuffer<ArmMatrixBuffer>(entity);
-        //     for (int i = 0; i < buffer.Length; i++)
-        //     {
-        //         matrices[i] = buffer[i].Value;
-        //     }
+        Entities.ForEach((Entity entity, ref ArmComponent armComponent) =>
+        {
+            DynamicBuffer<ArmMatrixBuffer> buffer = EntityManager.GetBuffer<ArmMatrixBuffer>(entity);
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                matrices[i] = buffer[i].Value;
+            }
 
-        //    Graphics.DrawMeshInstanced(util.GetGlobalData().armMesh ,0, util.GetGlobalData().armMaterial, matrices);
-        // });
+           Graphics.DrawMeshInstanced(util.GetGlobalData().armMesh ,0, util.GetGlobalData().armMaterial, matrices);
+        });
     }
 }
 
