@@ -7,9 +7,9 @@ using Unity.Transforms;
 using static Unity.Mathematics.math;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(InitRocksSystem))]
 public class ConveyorSystems : JobComponentSystem
 {
+ 
     BeginSimulationEntityCommandBufferSystem m_EntityCommandBufferSystem;
 
     protected override void OnCreate()
@@ -19,7 +19,7 @@ public class ConveyorSystems : JobComponentSystem
     }
 
     [BurstCompile]
-    struct ConveyorJob : IJobForEachWithEntity<Translation, RigidBodyComponent, ConveyorComponent>
+    public struct ConveyorJob : IJobForEachWithEntity<Translation, RigidBodyComponent, ConveyorComponent>
     {
         public EntityCommandBuffer.Concurrent CommandBuffer;
         public float DeltaTime;
@@ -42,7 +42,7 @@ public class ConveyorSystems : JobComponentSystem
         var job = new ConveyorJob
         {
             CommandBuffer = m_EntityCommandBufferSystem.CreateCommandBuffer().ToConcurrent(),
-            DeltaTime = Time.DeltaTime
+            DeltaTime = Time.DeltaTime,
         }.Schedule(this, inputDeps);
 
         m_EntityCommandBufferSystem.AddJobHandleForProducer(job);

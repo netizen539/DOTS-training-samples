@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.6050245, g: 0.5256481, b: 0.3172357, a: 1}
+  m_IndirectSpecularColor: {r: 0.6050254, g: 0.52564925, b: 0.3172366, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -411,7 +411,7 @@ MonoBehaviour:
   TinCanPrefab: {fileID: 1062600091147575846, guid: 375668c8eb9a44c45930795beef1b71a,
     type: 3}
   ArmPrefab: {fileID: 1092234786245138, guid: 2ed48e1a6bdf2e54594a60c25672b050, type: 3}
-  ArmCount: 50
+  ArmCount: 1000
   ArmWidth: 1
   ConveyorMargin: 10
   ConveyorSpeed: 1.5
