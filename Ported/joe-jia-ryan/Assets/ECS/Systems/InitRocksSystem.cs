@@ -4,7 +4,7 @@ using Unity.Transforms;
 using Unity.Jobs;
 using Unity.Collections;
 
-[UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateInGroup(typeof(InitializationSystemGroup))]
 [UpdateAfter(typeof(SpawnAllEntitiesSystem))]
 public class InitRocksSystem : JobComponentSystem
 {

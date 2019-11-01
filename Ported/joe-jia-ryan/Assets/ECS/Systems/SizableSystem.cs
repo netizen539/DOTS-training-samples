@@ -6,7 +6,6 @@ using Unity.Jobs;
 using Unity.Collections;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(InitRocksSystem))]
 public class SizableSystem : JobComponentSystem
 {
     protected override JobHandle OnUpdate(JobHandle inputDeps)

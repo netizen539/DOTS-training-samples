@@ -9,6 +9,13 @@ using Unity.Collections;
 [UpdateAfter(typeof(RockResetSystem))]
 public class RandomRockStateTransitionSystem : JobComponentSystem
 {
+    EntityQuery m_DataQuery;
+
+    protected override void OnCreate()
+    {
+        m_DataQuery = GetEntityQuery(typeof(ThrowingArmsSharedDataComponent));
+    }
+
     int count = 0;
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
@@ -25,13 +32,15 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
         jobHandle = Entities
         .WithName("MoveConveyorToHeld")
         .WithAll<RockComponent, ConveyorComponent>()
+        .WithDeallocateOnJobCompletion(throwingArmsComponentArray)
         .ForEach(
             (int entityInQueryIndex, Entity e, in ref Translation pos) => 
             {
+                var tac = throwingArmsComponentArray[0];
                 if (pos.Value.x >= 10f)
                 {                    
-                    int val = rnd.NextInt(0, 997);
-                    if (c % 991 == val)
+                    int val = rnd.NextInt(0, tac.ArmCount);
+                    if (entityInQueryIndex == val)
                     {
                         ecb.RemoveComponent<ConveyorComponent>(entityInQueryIndex, e);
                         ecb.AddComponent(entityInQueryIndex, e, new RockHeldComponent{Velocity = new float3(0f,2f,-2f)});

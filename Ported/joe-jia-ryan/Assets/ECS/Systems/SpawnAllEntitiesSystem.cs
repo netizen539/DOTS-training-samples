@@ -5,8 +5,8 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 
-[UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(TransformSystemGroup))]
+[UpdateInGroup(typeof(InitializationSystemGroup))]
+//[UpdateAfter(typeof(TransformSystemGroup))]
 public class SpawnAllEntitiesSystem : ComponentSystem
 {        
 
@@ -22,7 +22,7 @@ public class SpawnAllEntitiesSystem : ComponentSystem
             float3 armSpawnPos = new float3(0, 0, 0);
 
             PostUpdateCommands.RemoveComponent<SpawnAllComponent>(e);
-            
+
             // Calling Instantiate once per spawned Entity is rather slow, and not recommended
             // This code is placeholder until we add the ability to bulk-instantiate many entities from an ECB
             int index = 0;
