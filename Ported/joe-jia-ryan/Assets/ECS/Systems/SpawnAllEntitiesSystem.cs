@@ -18,7 +18,8 @@ public class SpawnAllEntitiesSystem : ComponentSystem
     {
         Entities.ForEach((Entity e, ref SpawnAllComponent sac) =>                
         {
-            int totalCount = sac.Count * 2;
+            int totalCount = sac.Count * 3;
+            float3 armSpawnPos = new float3(0, 0, 0);
 
             PostUpdateCommands.RemoveComponent<SpawnAllComponent>(e);
 
@@ -29,6 +30,7 @@ public class SpawnAllEntitiesSystem : ComponentSystem
             while (index < totalCount)
             {
                 entities[index] = PostUpdateCommands.Instantiate(sac.RockPrefab);
+        
                 PostUpdateCommands.AddComponent(entities[index], new Scale
                 {
                     Value = 0f
@@ -51,6 +53,15 @@ public class SpawnAllEntitiesSystem : ComponentSystem
                 });                
                 PostUpdateCommands.AddComponent(entities[index], new SizeableComponent { ScaleFactor = 1f, TargetSize = 0.4f, CurrentSize = 0f }); //TODO Need to fill in data
                 PostUpdateCommands.AddComponent(entities[index], new InitComponentTag());
+                index++;
+                
+                // Spawn Arms
+                entities[index] = PostUpdateCommands.Instantiate(sac.ArmPrefab);
+                PostUpdateCommands.SetComponent(entities[index], new Translation
+                {
+                    Value = armSpawnPos
+                });
+                armSpawnPos.x += 2.0f;
                 index++;
             }
 

@@ -19,7 +19,7 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
     int count = 0;
     protected override JobHandle OnUpdate(JobHandle inputDeps)
     {
-        var throwingArmsComponentArray = m_DataQuery.ToComponentDataArray<ThrowingArmsSharedDataComponent>(Allocator.TempJob);
+        /*
         var ecbs = World.GetOrCreateSystem<EndSimulationEntityCommandBufferSystem>();
         var ecb = ecbs.CreateCommandBuffer().ToConcurrent();
         Unity.Mathematics.Random rnd = new Unity.Mathematics.Random();
@@ -66,5 +66,7 @@ public class RandomRockStateTransitionSystem : JobComponentSystem
 
         ecbs.AddJobHandleForProducer(jobHandle);
         return jobHandle;
+        */
+        return inputDeps;
     }
 }
