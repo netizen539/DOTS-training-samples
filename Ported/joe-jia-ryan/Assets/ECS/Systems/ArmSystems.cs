@@ -24,12 +24,36 @@ public class util
         return array[array.Length - indexFromEnd - 1];
     }
     
+    public static float3 Last(DynamicBuffer<float3> array, int indexFromEnd)
+    {
+        return array[array.Length - indexFromEnd - 1];
+    }
+    
     public static void UpdateMatrices(Matrix4x4[] matrices, float3[] chain, int index, float thickness, float3 up) {
         // find the rendering matrices for an IK chain
         // (each pair of neighboring points is connected by a beam)
         for (int i=0;i<chain.Length-1;i++) {
             float3 delta = chain[i + 1] - chain[i];
             matrices[index + i] = Matrix4x4.TRS(chain[i] + delta * .5f,Quaternion.LookRotation(delta,up),new Vector3(thickness,thickness,math.length(delta)));
+        }
+    }
+    
+    public static void UpdateMatrices(Matrix4x4[] matrices, DynamicBuffer<float3> chain, int index, float thickness, float3 up) {
+        // find the rendering matrices for an IK chain
+        // (each pair of neighboring points is connected by a beam)
+        for (int i=0;i<chain.Length-1;i++) {
+            float3 delta = chain[i + 1] - chain[i];
+            matrices[index + i] = Matrix4x4.TRS(chain[i] + delta * .5f,Quaternion.LookRotation(delta,up),new Vector3(thickness,thickness,math.length(delta)));
+        }
+    }
+    
+    public static void UpdateMatricesSliced(Matrix4x4[] matrices, DynamicBuffer<float3> chain, int index, float thickness, float3 up, int startIdx, int stopIdx) {
+        // find the rendering matrices for an IK chain
+        // (each pair of neighboring points is connected by a beam)
+        int c = 0;
+        for (int i=startIdx;i<stopIdx-1; i++, c++) {
+            float3 delta = chain[i + 1] - chain[i];
+            matrices[index + c] = Matrix4x4.TRS(chain[i] + delta * .5f,Quaternion.LookRotation(delta,up),new Vector3(thickness,thickness,math.length(delta)));
         }
     }
     
@@ -561,6 +585,40 @@ public static class FABRIK {
             chain[i] = chain[i - 1] + math.normalize(delta) * boneLength;
         }
     }
+    
+    public static void SolveViaBuffer(DynamicBuffer<float3> chain, float boneLength, float3 anchor, float3 target, float3 bendHint) {
+        chain[chain.Length - 1] = target;
+        for (int i=chain.Length-2;i>=0;i--) {
+            chain[i] += bendHint;
+            float3 delta = chain[i] - chain[i + 1];
+            chain[i] = chain[i + 1] + math.normalize(delta) * boneLength;
+        }
+
+        chain[0] = anchor;
+        for (int i = 1; i<chain.Length; i++) {
+            float3 delta = chain[i] - chain[i - 1];
+            chain[i] = chain[i - 1] + math.normalize(delta) * boneLength;
+        }
+    }
+    
+    // 0 | 0,1,2,3
+    // 1 | 0,1,2,3
+    // 2
+    // 3
+    public static void SolveViaBufferSliced(DynamicBuffer<float3> chain, float boneLength, float3 anchor, float3 target, float3 bendHint, int startIdx, int stopIdx) {
+        chain[stopIdx - 1] = target;
+        for (int i=stopIdx-2; i>=startIdx; i--) {
+            chain[i] += bendHint;
+            float3 delta = chain[i] - chain[i + 1];
+            chain[i] = chain[i + 1] + math.normalize(delta) * boneLength;
+        }
+
+        chain[startIdx] = anchor;
+        for (int i = startIdx+1; i<stopIdx; i++) {
+            float3 delta = chain[i] - chain[i - 1];
+            chain[i] = chain[i - 1] + math.normalize(delta) * boneLength;
+        }
+    }
 }
 
 [AlwaysUpdateSystem]
@@ -577,59 +635,46 @@ public class ArmAnimationSystem : JobComponentSystem
        // [ReadOnly]
         [NativeDisableParallelForRestriction]
         public BufferFromEntity<ArmMatrixBuffer> matrixBufferLookup;
+        [NativeDisableParallelForRestriction]
+        public BufferFromEntity<ArmChainsBuffer> armChainsBufferLookup;
+        [NativeDisableParallelForRestriction]
+        public BufferFromEntity<FingerChainsBuffer> fingerChainsBufferLookup;
+        [NativeDisableParallelForRestriction]
+        public BufferFromEntity<ThumbChainsBuffer> thumbChainsBufferLookup;
 
         public EntityCommandBuffer.Concurrent ecb;
         
         public void Execute(Entity entity, int index, ref ArmComponent armComponent, 
             [ReadOnly] ref Translation translation, [ReadOnly] ref Rotation rotation)
         {
-            
-            //TODO do these chains need to be saved in the arm component so that they keep their position in between animations?
-            float3[] armChain;
-            float3[][] fingerChains;
-            float3[] thumbChain;
-            Matrix4x4[] matrices;
             float armBoneLength = armComponent.armBoneLength;
             float3 handUp = armComponent.handUp;
             float armBendStrength = armComponent.armBendStrength;
+            Matrix4x4[] matrices = new Matrix4x4[17];
+            
+            DynamicBuffer<ArmChainsBuffer> armChainsBuffer = armChainsBufferLookup[entity];
+            DynamicBuffer<FingerChainsBuffer> fingerChainsBuffer = fingerChainsBufferLookup[entity];
+            DynamicBuffer<ThumbChainsBuffer> thumbChainsBuffer = thumbChainsBufferLookup[entity];
 
-            // TODO this shouldn't be done here, but we need to save these IK chains on a component?
-            armChain = new float3[3];
-            fingerChains = new float3[4][];
-            for (int i=0;i<fingerChains.Length;i++) {
-                fingerChains[i] = new float3[4];
-            }
-            thumbChain = new float3[4];
-
-            int boneCount = 2;
-            for (int i=0;i<fingerChains.Length;i++) {
-                boneCount += fingerChains[i].Length - 1;
-            }
-            boneCount += thumbChain.Length - 1;
-		
-            matrices = new Matrix4x4[boneCount];
-            
-            //////////////////////////////////////////
-            
-            
+            ///////////////////////////
             // Resting position for hand
             float time = worldTime + armComponent.timeOffset;
             
             // solve the arm IK chain first
             float3 anchor = translation.Value;
             //float3 anchor = new float3();
-            FABRIK.Solve(armChain,armBoneLength, anchor, armComponent.handTarget,handUp*armBendStrength);
+            FABRIK.SolveViaBuffer(armChainsBuffer.Reinterpret<float3>(),armBoneLength, anchor, armComponent.handTarget,handUp*armBendStrength);
 
             Quaternion q = rotation.Value;
             float3 transformRight = math.normalize(math.mul(q, directions.right));
             
             // figure out our current "hand vectors" from our arm orientation
-            float3 handForward = math.normalize(util.Last(armChain, 0) - util.Last(armChain, 1));
+            float3 handForward = math.normalize(util.Last(armChainsBuffer.Reinterpret<float3>(), 0) - util.Last(armChainsBuffer.Reinterpret<float3>(), 1));
             handUp = math.normalize(math.cross(handForward,transformRight));
             float3 handRight = math.cross(handUp,handForward);
             
             // create handspace-to-worldspace matrix
-            armComponent.handMatrix = Matrix4x4.TRS(util.Last(armChain, 0),Quaternion.LookRotation(handForward,handUp),directions.one);
+            armComponent.handMatrix = Matrix4x4.TRS(util.Last(armChainsBuffer.Reinterpret<float3>(), 0),Quaternion.LookRotation(handForward,handUp),directions.one);
 
             // how much are our fingers gripping?
             // (during a reach, this is based on the reach timer)
@@ -646,11 +691,11 @@ public class ArmAnimationSystem : JobComponentSystem
             }
            
             // create rendering matrices for arm bones
-            util.UpdateMatrices(matrices, armChain,0, armComponent.armBoneThickness,handUp);
-            int matrixIndex = armChain.Length - 1;
+            util.UpdateMatrices(matrices, armChainsBuffer.Reinterpret<float3>(),0, armComponent.armBoneThickness,handUp);
+            int matrixIndex = armChainsBuffer.Reinterpret<float3>().Length - 1;
 
             // next:  fingers
-            float3 handPos = util.Last(armChain, 0);
+            float3 handPos = util.Last(armChainsBuffer.Reinterpret<float3>(), 0);
             // fingers spread out during a throw
             float openPalm = throwCurve.Evaluate(armComponent.throwTimer);
             
@@ -661,10 +706,10 @@ public class ArmAnimationSystem : JobComponentSystem
             float[] fingerThicknesses = {0.05f, 0.05f, 0.05f, 0.05f};
             float fingerBendStrength = 0.2f;
 
-            for (int i=0;i<fingerChains.Length;i++)
+            for (int i=0; i < 4; i++)
             {
                 float3 handRightTemp = handRight * (fingerXOffset + i * fingerSpacing);
-               // Debug.Log("RJ handRightTemp:"+handRightTemp);
+
                 // find knuckle position for this finger
                 float3 fingerPos = handPos + handRightTemp;
 
@@ -683,11 +728,14 @@ public class ArmAnimationSystem : JobComponentSystem
                 fingerTarget += (handUp * .3f + handForward * .1f + handRight*(i-1.5f)*.1f) * openPalm;
 
                 // solve this finger's IK chain
-                FABRIK.Solve(fingerChains[i],fingerBoneLengths[i],fingerPos,fingerTarget,handUp*fingerBendStrength);
+               // FABRIK.Solve(fingerChains[i],fingerBoneLengths[i],fingerPos,fingerTarget,handUp*fingerBendStrength);
+               int startIdx = i * 4;
+               int stopIdx = startIdx + 4;
+               FABRIK.SolveViaBufferSliced(fingerChainsBuffer.Reinterpret<float3>(), fingerBoneLengths[i], fingerPos, fingerTarget,handUp*fingerBendStrength, startIdx, stopIdx);
 
                 // update this finger's rendering matrices
-                util.UpdateMatrices(matrices, fingerChains[i],matrixIndex,fingerThicknesses[i],handUp);
-                matrixIndex += fingerChains[i].Length - 1;
+                util.UpdateMatricesSliced(matrices, fingerChainsBuffer.Reinterpret<float3>(),matrixIndex,fingerThicknesses[i],handUp, startIdx, stopIdx);
+                matrixIndex += 4 - 1;
             }
             
             // the thumb is pretty much the same as the fingers
@@ -707,8 +755,8 @@ public class ArmAnimationSystem : JobComponentSystem
             float3 rockThumbPos = armComponent.lastIntendedRockPos + math.normalize(rockThumbDelta) * (armComponent.lastIntendedRockSize * .5f);
             thumbTarget = math.lerp(thumbTarget,rockThumbPos,fingerGrabT);
 
-            FABRIK.Solve(thumbChain,thumbBoneLength,thumbPos,thumbTarget,thumbBendHint * thumbBendStrength);
-            util.UpdateMatrices(matrices, thumbChain,matrixIndex,thumbThickness,thumbBendHint);
+            FABRIK.SolveViaBuffer(thumbChainsBuffer.Reinterpret<float3>(),thumbBoneLength,thumbPos,thumbTarget,thumbBendHint * thumbBendStrength);
+            util.UpdateMatrices(matrices, thumbChainsBuffer.Reinterpret<float3>(), matrixIndex,thumbThickness,thumbBendHint);
        
             DynamicBuffer<ArmMatrixBuffer> buffer = matrixBufferLookup[entity];
             buffer.Clear();
@@ -741,6 +789,9 @@ public class ArmAnimationSystem : JobComponentSystem
         {
             worldTime = Time.time,
             matrixBufferLookup = GetBufferFromEntity<ArmMatrixBuffer>(),
+            armChainsBufferLookup = GetBufferFromEntity<ArmChainsBuffer>(),
+            fingerChainsBufferLookup = GetBufferFromEntity<FingerChainsBuffer>(),
+            thumbChainsBufferLookup = GetBufferFromEntity<ThumbChainsBuffer>(),
             ecb = ecbSystem.CreateCommandBuffer().ToConcurrent()
         };
         var handle = job.Schedule(this, inputDeps);
