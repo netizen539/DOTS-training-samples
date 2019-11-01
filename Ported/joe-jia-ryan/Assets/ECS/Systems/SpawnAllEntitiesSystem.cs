@@ -5,8 +5,8 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 
-[UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(TransformSystemGroup))]
+[UpdateInGroup(typeof(InitializationSystemGroup))]
+//[UpdateAfter(typeof(TransformSystemGroup))]
 public class SpawnAllEntitiesSystem : ComponentSystem
 {        
 
